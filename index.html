@@ -421,7 +421,10 @@
       flex: 1;
       height: 100%;
     }
-    .bottom-nav-item.active { color: #2563eb; }
+    .bottom-nav-item { position: relative; color: #7b8794; font-size: 11px; }
+    .bottom-nav-item .nav-svg { width: 24px; height: 24px; }
+    .bottom-nav-item.active { color: #1f5f4a; }
+    .bottom-nav-item.active::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 44px; height: 3px; border-radius: 0 0 4px 4px; background: #1f5f4a; }
     .bottom-nav-item span.icon { font-size: 16px; }
 
     /* Desktop Top Navigation Bar Styles */
@@ -1308,9 +1311,19 @@
 
     <!-- 4. SETTINGS HUB -->
     <div id="settings-section" class="app-screen-section sheet-container" style="display:none;">
-      <h3 style="margin-bottom: 10px; font-size: 14px; font-weight:800;">App Settings & Data Hub</h3>
+      <h3 style="margin-bottom: 10px; font-size: 14px; font-weight:800;">More</h3>
       
       <div class="settings-list">
+        <div class="settings-item" onclick="switchSection('acgroups')">
+          <span>🗂️ Groups (Account Groups)</span>
+          <span style="color:#2563eb;">Open →</span>
+        </div>
+
+        <div class="settings-item" onclick="switchSection('accounts')">
+          <span>📒 Accounts (Account Master)</span>
+          <span style="color:#2563eb;">Open →</span>
+        </div>
+
         <div class="settings-item" onclick="exportDataBackup()">
           <span>📤 Backup & Export JSON</span>
           <span style="color:#2563eb;">Download ↓</span>
@@ -1351,32 +1364,24 @@
     <!-- Bottom Sticky Navigation Bar (Mobile Only) -->
     <nav class="bottom-app-bar">
       <button class="bottom-nav-item active" id="botNav-dashboard" onclick="switchSection('dashboard')">
-        <span class="icon">🏠</span>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>
         <span>Dashboard</span>
       </button>
       <button class="bottom-nav-item" id="botNav-transaction" onclick="switchSection('transaction')">
-        <span class="icon">📑</span>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 12h5l1.5 2.5h4L15.5 12h5"/></svg>
         <span>Transaction</span>
       </button>
       <button class="bottom-nav-item" id="botNav-customers" onclick="switchSection('customers')">
-        <span class="icon">👥</span>
-        <span>Customers</span>
-      </button>
-      <button class="bottom-nav-item" id="botNav-acgroups" onclick="switchSection('acgroups')">
-        <span class="icon">🗂️</span>
-        <span>Groups</span>
-      </button>
-      <button class="bottom-nav-item" id="botNav-accounts" onclick="switchSection('accounts')">
-        <span class="icon">📒</span>
-        <span>Accounts</span>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.3c2.3.7 3.5 2.6 3.5 5.7"/></svg>
+        <span>Customer</span>
       </button>
       <button class="bottom-nav-item" id="botNav-reports" onclick="switchSection('reports')">
-        <span class="icon">📈</span>
-        <span>Reports</span>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+        <span>Report</span>
       </button>
-      <button class="bottom-nav-item" id="botNav-settings" onclick="switchSection('settings')">
-        <span class="icon">⚙️</span>
-        <span>Settings</span>
+      <button class="bottom-nav-item" id="botNav-more" onclick="switchSection('settings')">
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <span>More</span>
       </button>
     </nav>
   </div>
@@ -2796,7 +2801,8 @@
 
       // Mobile bottom nav active sync
       document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById(`botNav-${section}`);
+      const navKey = ['acgroups', 'accounts', 'settings'].includes(section) ? 'more' : section;
+      const activeBtn = document.getElementById(`botNav-${navKey}`);
       if (activeBtn) activeBtn.classList.add('active');
 
       if (section === 'dashboard') {
