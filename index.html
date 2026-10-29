@@ -406,6 +406,56 @@
     .mode-select { width: 100%; min-width: 64px; padding: 6px 4px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; font-size: 12px; font-weight: 700; color: #0f172a; font-family: inherit; }
     .mode-pill { flex: 1; padding: 9px 4px; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; color: #475569; font-size: 13px; font-weight: 800; cursor: pointer; font-family: inherit; }
     .mode-pill.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+    /* ===== Service Admin console ===== */
+    #admin-login-container, #admin-app, #tenantLockScreen { display: none; position: fixed; inset: 0; font-family: inherit; }
+    #admin-login-container { z-index: 100001; background: #1e293b; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+    #tenantLockScreen { z-index: 100003; background: #0f172a; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+    #admin-app { z-index: 100002; background: #f1f5f9; }
+    .adm-card { background: #fff; border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 360px; margin: auto; }
+    .adm-card h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 2px; }
+    .adm-sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+    .adm-logo { width: 44px; height: 44px; border-radius: 10px; background: #b91c1c; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; flex-shrink: 0; }
+    .adm-drawer { position: fixed; top: 0; bottom: 0; left: 0; width: 78%; max-width: 300px; background: #1e293b; color: #e2e8f0; display: flex; flex-direction: column; transform: translateX(-100%); transition: transform .22s ease; z-index: 3; }
+    .adm-drawer.open { transform: translateX(0); }
+    .adm-scrim { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: none; z-index: 2; }
+    .adm-scrim.open { display: block; }
+    .adm-brand { display: flex; align-items: center; gap: 12px; padding: 18px 16px; border-bottom: 1px solid #334155; }
+    .adm-brand b { display: block; font-size: 18px; color: #fff; }
+    .adm-brand span { font-size: 12.5px; color: #94a3b8; }
+    .adm-search { margin: 12px; padding: 10px 12px; background: #273449; border: 1px solid #475569; border-radius: 8px; color: #e2e8f0; font-size: 13px; font-family: inherit; outline: none; }
+    .adm-nav { flex: 1; overflow-y: auto; }
+    .adm-nav a { display: block; padding: 13px 20px; font-size: 14.5px; color: #cbd5e1; cursor: pointer; border-left: 4px solid transparent; }
+    .adm-nav a.active { background: #2b3a55; color: #fff; font-weight: 700; border-left-color: #f59e0b; }
+    .adm-foot { border-top: 1px solid #334155; padding: 14px 16px; font-size: 12.5px; color: #94a3b8; }
+    .adm-foot b { display: block; color: #fff; font-size: 14px; }
+    .adm-foot a { color: #fbbf24; text-decoration: underline; cursor: pointer; font-size: 13.5px; display: inline-block; margin-top: 6px; }
+    .adm-top { position: fixed; top: 0; left: 0; right: 0; height: 52px; background: #1e293b; color: #fff; display: flex; align-items: center; gap: 12px; padding: 0 14px; z-index: 1; }
+    .adm-top button { background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; }
+    .adm-main { position: absolute; top: 52px; bottom: 0; left: 0; right: 0; overflow-y: auto; padding: 14px; }
+    .adm-page { display: none; max-width: 900px; margin: 0 auto; }
+    .adm-page h3 { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+    .adm-page .adm-sub { margin-bottom: 12px; }
+    .adm-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .adm-stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; }
+    .adm-stat b { font-size: 26px; color: #0f172a; display: block; }
+    .adm-stat span { font-size: 12.5px; color: #64748b; }
+    .adm-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+    .adm-box-h { padding: 10px 14px; font-size: 12.5px; font-weight: 800; color: #475569; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .adm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #0f172a; }
+    .adm-row:last-child { border-bottom: none; }
+    .adm-row small { display: block; color: #94a3b8; font-size: 11px; }
+    .adm-pill { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+    .adm-pill.trial { background: #fef3c7; color: #b45309; } .adm-pill.active { background: #dcfce7; color: #166534; }
+    .adm-pill.expired { background: #fee2e2; color: #b91c1c; } .adm-pill.blocked { background: #e2e8f0; color: #334155; }
+    .adm-input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-family: inherit; margin-bottom: 8px; }
+    .adm-btn { padding: 9px 14px; border: none; border-radius: 8px; background: #1f5f4a; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+    @media (min-width: 900px) {
+      .adm-drawer { transform: none; z-index: 1; }
+      .adm-scrim, .adm-scrim.open { display: none; }
+      .adm-top { left: 300px; } .adm-top button { display: none; }
+      .adm-main { left: 300px; }
+    }
     .bottom-nav-item {
       display: flex;
       flex-direction: column;
@@ -816,11 +866,137 @@
         </div>
       </div>
 
+      <!-- Registration payment details (shown only on Register) -->
+      <div id="regCompanyBox" style="display:none; margin:2px 0 14px; padding:12px; border:1px solid #bbf7d0; background:#f0fdf4; border-radius:12px; text-align:left;">
+        <div style="font-size:12.5px; font-weight:800; color:#166534; margin-bottom:2px;">Registration Fee Payment</div>
+        <div style="font-size:11px; color:#475569; margin-bottom:8px;">Pay the registration amount using the details below, then register and contact us with your payment screenshot.</div>
+        <div style="text-align:center;">
+          <img id="regQrImg" alt="UPI QR" style="display:none; max-width:170px; width:100%; border:1px solid #e2e8f0; border-radius:10px; padding:5px; background:#fff;">
+        </div>
+        <div style="font-size:12px; color:#0f172a; line-height:1.8; margin-top:6px;">
+          <div id="regUpiRow" style="display:none;"><b>UPI ID:</b> <span id="regUpiId"></span> <a style="color:#2563eb; font-weight:700; cursor:pointer; margin-left:4px;" onclick="copyRegUpi()">Copy</a></div>
+          <div id="regPhoneRow" style="display:none;"><b>Contact:</b> <a id="regPhone" style="color:#2563eb; font-weight:700;"></a></div>
+          <div id="regEmailRow" style="display:none;"><b>Email:</b> <a id="regEmail" style="color:#2563eb; font-weight:700; word-break:break-all;"></a></div>
+        </div>
+        <div id="regCompanyEmpty" style="display:none; font-size:11.5px; color:#94a3b8;">Payment details will appear here once added by the admin.</div>
+      </div>
+
       <button class="fintrack-btn" id="authSubmitBtn" onclick="handleAuthSubmit()">Login</button>
 
       <div class="fintrack-card-footer">
         <a id="forgotPwdLink" onclick="openForgotModal()">Forgot Password?</a>
         <a id="authModeToggleLink" onclick="toggleAuthModeView()">Register</a>
+      </div>
+      <div style="text-align:center; margin-top:12px;"><a style="font-size:11px; color:#94a3b8; cursor:pointer;" onclick="showAdminLogin(true)">Service admin login</a></div>
+    </div>
+  </div>
+
+  <!-- Service Admin Login (separate) -->
+  <div id="admin-login-container">
+    <div class="adm-card">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div class="adm-logo">₹</div>
+        <div><h1>FinTrack</h1><div class="adm-sub" style="margin:0;">Service admin</div></div>
+      </div>
+      <input type="text" id="admUsername" class="adm-input" placeholder="Admin username" autocomplete="username">
+      <input type="password" id="admPassword" class="adm-input" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') adminLogin()">
+      <button class="adm-btn" style="width:100%; padding:11px;" onclick="adminLogin()">Login</button>
+      <div style="text-align:center; margin-top:14px;"><a style="font-size:12px; color:#2563eb; cursor:pointer;" onclick="showAdminLogin(false)">← Back to user login</a></div>
+    </div>
+  </div>
+
+  <!-- Tenant lock (blocked / expired) -->
+  <div id="tenantLockScreen">
+    <div class="adm-card">
+      <h1 id="lockTitle">Account locked</h1>
+      <div class="adm-sub" id="lockMsg"></div>
+      <div id="lockCompany" style="font-size:12.5px; line-height:1.8; color:#0f172a; margin-bottom:12px;"></div>
+      <button class="adm-btn" style="width:100%; background:#b91c1c;" onclick="promptSimpleLogout()">Log out</button>
+    </div>
+  </div>
+
+  <!-- Service Admin Console -->
+  <div id="admin-app">
+    <div class="adm-top"><button onclick="admToggleDrawer(true)">☰</button><b id="admTopTitle">Overview</b></div>
+    <div class="adm-scrim" id="admScrim" onclick="admToggleDrawer(false)"></div>
+    <aside class="adm-drawer" id="admDrawer">
+      <div class="adm-brand"><div class="adm-logo">₹</div><div><b>FinTrack</b><span>Service admin</span></div></div>
+      <input class="adm-search" id="admMenuSearch" placeholder="Search menu  (Ctrl+K)" oninput="admFilterMenu()">
+      <nav class="adm-nav" id="admNav">
+        <a data-page="overview" class="active" onclick="admGo('overview')">Overview</a>
+        <a data-page="firms" onclick="admGo('firms')">Firms</a>
+        <a data-page="admins" onclick="admGo('admins')">Service admins</a>
+        <a data-page="company" onclick="admGo('company')">Company profile</a>
+        <a data-page="password" onclick="admToggleDrawer(false); openChangePasswordModal();">Change password</a>
+        <a data-page="about" onclick="admGo('about')">About &amp; what's new</a>
+      </nav>
+      <div class="adm-foot">
+        <b id="admUserName">-</b>
+        <div id="admUserEmail" style="word-break:break-all;">-</div>
+        <div style="margin-top:8px; font-size:11.5px;">FinTrack v2.1.0 · what's new</div>
+        <a onclick="promptSimpleLogout()">Log out</a>
+      </div>
+    </aside>
+
+    <main class="adm-main">
+      <section class="adm-page" id="admPage-overview">
+        <h3>Overview</h3><div class="adm-sub">All firms registered on FinTrack.</div>
+        <div class="adm-stats" id="admStats"></div>
+        <div class="adm-box"><div class="adm-box-h">Recent registrations</div><div id="admRecent"></div></div>
+      </section>
+
+      <section class="adm-page" id="admPage-firms">
+        <h3>Firms</h3><div class="adm-sub">Tap a firm to set trial / paid / blocked and record payments.</div>
+        <input class="adm-input" id="admFirmSearch" placeholder="Search firm / username" oninput="admRenderFirms()">
+        <div class="adm-box"><div id="admFirmList"></div></div>
+      </section>
+
+      <section class="adm-page" id="admPage-admins">
+        <h3>Service admins</h3><div class="adm-sub">People who can open this console.</div>
+        <div class="adm-box"><div id="admAdminList"></div></div>
+        <div class="adm-box" style="padding:12px;">
+          <div style="font-size:12.5px; font-weight:800; margin-bottom:6px;">Make an existing user a service admin</div>
+          <input class="adm-input" id="admNewAdmin" placeholder="Username (lowercase)">
+          <button class="adm-btn" onclick="admAddAdmin()">Add admin</button>
+        </div>
+      </section>
+
+      <section class="adm-page" id="admPage-company">
+        <h3>Company profile</h3><div class="adm-sub">Shown to new users on the Register screen for paying the registration fee.</div>
+        <div class="adm-box" id="admCompanySummary" style="padding:12px; font-size:13px; line-height:1.8;"></div>
+        <button class="adm-btn" onclick="openCompanyModal()">Edit company profile</button>
+      </section>
+
+      <section class="adm-page" id="admPage-about">
+        <h3>About &amp; what's new</h3><div class="adm-sub">FinTrack v2.1.0</div>
+        <div class="adm-box" style="padding:12px; font-size:13px; line-height:1.8;">
+          • Separate Service admin login and console<br>
+          • Firms list with trial / active / blocked status and payments<br>
+          • Company profile (mail, contact, UPI QR) shown on Register<br>
+          • Income, Expense, Receipt and Payment tabs
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Firm edit modal -->
+  <div class="modal-overlay" id="admFirmModal">
+    <div class="modal-box">
+      <h4 id="admFirmTitle">Firm</h4>
+      <div style="text-align:left;">
+        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Status</label>
+        <select id="admFirmStatus" class="modal-input-field"><option value="trial">Trial</option><option value="active">Active (paid)</option><option value="blocked">Blocked</option></select>
+        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Valid until (leave empty = no expiry)</label>
+        <input type="date" id="admFirmUntil" class="modal-input-field">
+        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Payment received now (₹, optional)</label>
+        <input type="number" id="admFirmPay" class="modal-input-field" inputmode="decimal" placeholder="0">
+        <div style="font-size:11px; color:#64748b; margin-bottom:6px;">Total collected so far: ₹<span id="admFirmPaid">0</span></div>
+        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Notes</label>
+        <input type="text" id="admFirmNotes" class="modal-input-field" placeholder="Notes">
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-cancel-btn" style="flex:1;" onclick="closeModal('admFirmModal')">Cancel</button>
+        <button class="modal-btn" style="flex:1; background:#1f5f4a; color:#fff;" onclick="admSaveFirm()">Save</button>
       </div>
     </div>
   </div>
@@ -1893,6 +2069,22 @@
         fintrackAuthUser = sessionUser;
         currentUser = { username: sessionUser.user_metadata?.username || sessionUser.email.split('@')[0] };
         localStorage.setItem('cashbook_active_user', JSON.stringify(currentUser));
+
+        document.getElementById('admin-login-container').style.display = 'none';
+        if (isSuperAdmin()) {
+          document.getElementById('auth-screen-container').style.display = 'none';
+          document.getElementById('main-app-content').style.display = 'none';
+          document.getElementById('tenantLockScreen').style.display = 'none';
+          showAdminApp();
+          return;
+        }
+        document.getElementById('admin-app').style.display = 'none';
+        if (await showTenantLockIfNeeded()) {
+          document.getElementById('auth-screen-container').style.display = 'none';
+          document.getElementById('main-app-content').style.display = 'none';
+          return;
+        }
+        document.getElementById('tenantLockScreen').style.display = 'none';
         
         document.getElementById('auth-screen-container').style.display = 'none';
         document.getElementById('main-app-content').style.display = 'block';
@@ -1903,8 +2095,10 @@
         initUserData();
         await loadFromSupabase();
       } else {
-        document.getElementById('auth-screen-container').style.display = 'flex';
+        document.getElementById('admin-app').style.display = 'none';
+        document.getElementById('tenantLockScreen').style.display = 'none';
         document.getElementById('main-app-content').style.display = 'none';
+        showAdminLogin(location.hash === '#admin');
       }
     }
 
@@ -3389,6 +3583,204 @@
       showToast('Company profile saved', 'success');
     }
 
+
+    /* ===== Service Admin console ===== */
+    function showAdminLogin(on) {
+      document.getElementById('admin-login-container').style.display = on ? 'flex' : 'none';
+      document.getElementById('auth-screen-container').style.display = on ? 'none' : 'flex';
+      if (on) { location.hash = 'admin'; } else if (location.hash === '#admin') { history.replaceState(null, '', location.pathname + location.search); }
+    }
+
+    async function adminLogin() {
+      const u = document.getElementById('admUsername').value.trim();
+      const p = document.getElementById('admPassword').value;
+      if (!u || !p) return showToast('Enter username and password', 'error');
+      try {
+        const data = await fintrackLogin(u, p);
+        const role = data && data.user && data.user.app_metadata && data.user.app_metadata.role;
+        if (role !== 'super_admin') {
+          await fintrackSupabase.auth.signOut();
+          fintrackAuthUser = null;
+          return showToast('This login is only for Service admins', 'error');
+        }
+        document.getElementById('admPassword').value = '';
+        await checkAuthSession();
+      } catch (e) { showToast(e.message || 'Login failed', 'error'); }
+    }
+
+    let admFirms = [];
+    let admCurrentFirm = null;
+
+    function showAdminApp() {
+      document.getElementById('admin-app').style.display = 'block';
+      document.getElementById('admUserName').innerText = currentUser.username;
+      document.getElementById('admUserEmail').innerText = (fintrackAuthUser && fintrackAuthUser.email) || '';
+      admGo('overview');
+    }
+
+    function admToggleDrawer(open) {
+      document.getElementById('admDrawer').classList.toggle('open', open);
+      document.getElementById('admScrim').classList.toggle('open', open);
+    }
+
+    function admFilterMenu() {
+      const q = document.getElementById('admMenuSearch').value.trim().toLowerCase();
+      document.querySelectorAll('#admNav a').forEach(a => { a.style.display = a.innerText.toLowerCase().includes(q) ? 'block' : 'none'; });
+    }
+
+    function admGo(page) {
+      ['overview', 'firms', 'admins', 'company', 'about'].forEach(p => {
+        document.getElementById('admPage-' + p).style.display = p === page ? 'block' : 'none';
+      });
+      document.querySelectorAll('#admNav a').forEach(a => a.classList.toggle('active', a.dataset.page === page));
+      const t = { overview: 'Overview', firms: 'Firms', admins: 'Service admins', company: 'Company profile', about: "About & what's new" };
+      document.getElementById('admTopTitle').innerText = t[page];
+      admToggleDrawer(false);
+      if (page === 'overview' || page === 'firms') admLoadFirms();
+      if (page === 'admins') admLoadAdmins();
+      if (page === 'company') admRenderCompany();
+    }
+
+    function admFirmState(f) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (f.status === 'blocked') return 'blocked';
+      if (f.valid_until && f.valid_until < today) return 'expired';
+      return f.status === 'active' ? 'active' : 'trial';
+    }
+    const admFmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+    const admMoney = n => '₹ ' + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    async function admLoadFirms() {
+      const { data, error } = await fintrackSupabase.from('tenant_registry').select('*').order('created_at', { ascending: false });
+      if (error) {
+        const msg = 'Firms table is not set up. Run supabase_admin_setup.sql in Supabase.';
+        document.getElementById('admStats').innerHTML = '';
+        document.getElementById('admRecent').innerHTML = `<div class="adm-row">${msg}</div>`;
+        document.getElementById('admFirmList').innerHTML = `<div class="adm-row">${msg}</div>`;
+        return;
+      }
+      admFirms = data || [];
+      admRenderStats();
+      admRenderFirms();
+    }
+
+    function admRenderStats() {
+      const c = { trial: 0, active: 0, expired: 0, blocked: 0 };
+      let paid = 0;
+      admFirms.forEach(f => { c[admFirmState(f)]++; paid += Number(f.amount_paid) || 0; });
+      const card = (n, l) => `<div class="adm-stat"><b>${n}</b><span>${l}</span></div>`;
+      document.getElementById('admStats').innerHTML =
+        card(admFirms.length, 'Total firms') + card(c.trial, 'On trial') + card(c.active, 'Active (paid)') +
+        card(c.expired + c.blocked, 'Expired / blocked') +
+        `<div class="adm-stat" style="grid-column:1/3;"><b style="font-size:22px;">${admMoney(paid)}</b><span>Collected so far</span></div>`;
+      document.getElementById('admRecent').innerHTML = admFirms.slice(0, 5).map(f =>
+        `<div class="adm-row"><div>${escHtml(f.username)}<small>${admFmtDate(f.created_at)}</small></div><span class="adm-pill ${admFirmState(f)}">${admFirmState(f)}</span></div>`
+      ).join('') || '<div class="adm-row">No firms yet</div>';
+    }
+
+    function admRenderFirms() {
+      const q = (document.getElementById('admFirmSearch').value || '').trim().toLowerCase();
+      const list = admFirms.filter(f => !q || String(f.username).toLowerCase().includes(q));
+      document.getElementById('admFirmList').innerHTML = list.map(f => {
+        const st = admFirmState(f);
+        return `<div class="adm-row" style="cursor:pointer;" onclick="admOpenFirm('${f.user_id}')">
+          <div>${escHtml(f.username)}<small>Registered ${admFmtDate(f.created_at)} · Valid until ${f.valid_until ? admFmtDate(f.valid_until) : 'no expiry'}</small></div>
+          <span class="adm-pill ${st}">${st}</span></div>`;
+      }).join('') || '<div class="adm-row">No firms found</div>';
+    }
+
+    function admOpenFirm(id) {
+      const f = admFirms.find(x => x.user_id === id);
+      if (!f) return;
+      admCurrentFirm = f;
+      document.getElementById('admFirmTitle').innerText = f.username;
+      document.getElementById('admFirmStatus').value = f.status || 'trial';
+      document.getElementById('admFirmUntil').value = f.valid_until || '';
+      document.getElementById('admFirmPay').value = '';
+      document.getElementById('admFirmPaid').innerText = Number(f.amount_paid) || 0;
+      document.getElementById('admFirmNotes').value = f.notes || '';
+      document.getElementById('admFirmModal').style.display = 'flex';
+    }
+
+    async function admSaveFirm() {
+      const f = admCurrentFirm;
+      if (!f) return;
+      const add = parseFloat(document.getElementById('admFirmPay').value) || 0;
+      const upd = {
+        status: document.getElementById('admFirmStatus').value,
+        valid_until: document.getElementById('admFirmUntil').value || null,
+        amount_paid: (Number(f.amount_paid) || 0) + add,
+        notes: document.getElementById('admFirmNotes').value.trim()
+      };
+      const { error } = await fintrackSupabase.from('tenant_registry').update(upd).eq('user_id', f.user_id);
+      if (error) return showToast('Save failed: ' + error.message, 'error');
+      closeModal('admFirmModal');
+      showToast('Firm updated', 'success');
+      admLoadFirms();
+    }
+
+    async function admLoadAdmins() {
+      const box = document.getElementById('admAdminList');
+      const { data, error } = await fintrackSupabase.rpc('admin_list_admins');
+      if (error) { box.innerHTML = '<div class="adm-row">Not set up. Run supabase_admin_setup.sql in Supabase.</div>'; return; }
+      box.innerHTML = (data || []).map(a => {
+        const me = fintrackAuthUser && a.user_id === fintrackAuthUser.id;
+        return `<div class="adm-row"><div>${escHtml(a.username)}${me ? ' (you)' : ''}<small>${escHtml(a.email)}</small></div>${me ? '' : `<button class="adm-btn" style="background:#b91c1c;" onclick="admRemoveAdmin('${escHtml(a.username)}')">Remove</button>`}</div>`;
+      }).join('') || '<div class="adm-row">No admins</div>';
+    }
+
+    async function admSetAdmin(username, make) {
+      const { error } = await fintrackSupabase.rpc('admin_set_admin', { p_username: username, p_make: make });
+      if (error) return showToast(error.message, 'error');
+      showToast(make ? 'Admin added. They must log in again.' : 'Admin removed', 'success');
+      admLoadAdmins();
+    }
+    function admAddAdmin() {
+      const u = document.getElementById('admNewAdmin').value.trim().toLowerCase();
+      if (!u) return showToast('Enter a username', 'error');
+      document.getElementById('admNewAdmin').value = '';
+      admSetAdmin(u, true);
+    }
+    function admRemoveAdmin(u) { admSetAdmin(u, false); }
+
+    async function admRenderCompany() {
+      await loadCompanyProfile();
+      const p = companyProfile || {};
+      document.getElementById('admCompanySummary').innerHTML =
+        `<div><b>Email:</b> ${escHtml(p.email || '-')}</div><div><b>Contact:</b> ${escHtml(p.phone || '-')}</div><div><b>UPI ID:</b> ${escHtml(p.upi_id || '-')}</div>` +
+        (p.upi_qr ? `<img src="${p.upi_qr}" style="max-width:160px; margin-top:6px; border:1px solid #e2e8f0; border-radius:10px; padding:5px;">` : '<div style="color:#94a3b8;">No QR added</div>');
+    }
+
+    /* Tenant lock: blocked or expired accounts see payment details only */
+    async function showTenantLockIfNeeded() {
+      try {
+        const { data, error } = await fintrackSupabase.from('tenant_registry').select('status,valid_until').eq('user_id', fintrackAuthUser.id).maybeSingle();
+        if (error || !data) return false;               // table missing or no row: do not lock
+        const st = admFirmState(data);
+        if (st !== 'blocked' && st !== 'expired') return false;
+        await loadCompanyProfile();
+        const p = companyProfile || {};
+        document.getElementById('lockTitle').innerText = st === 'blocked' ? 'Account blocked' : 'Subscription ended';
+        document.getElementById('lockMsg').innerText = st === 'blocked'
+          ? 'Your account is blocked. Please contact us.'
+          : 'Your trial / subscription has ended. Pay the amount below and contact us to continue.';
+        document.getElementById('lockCompany').innerHTML =
+          (p.upi_qr ? `<div style="text-align:center;"><img src="${p.upi_qr}" style="max-width:170px; width:100%; border:1px solid #e2e8f0; border-radius:10px; padding:5px;"></div>` : '') +
+          (p.upi_id ? `<div><b>UPI ID:</b> ${escHtml(p.upi_id)}</div>` : '') +
+          (p.phone ? `<div><b>Contact:</b> <a href="tel:${escHtml(p.phone)}">${escHtml(p.phone)}</a></div>` : '') +
+          (p.email ? `<div><b>Email:</b> <a href="mailto:${escHtml(p.email)}">${escHtml(p.email)}</a></div>` : '');
+        document.getElementById('tenantLockScreen').style.display = 'flex';
+        return true;
+      } catch (e) { return false; }
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K') && document.getElementById('admin-app').style.display === 'block') {
+        e.preventDefault();
+        document.getElementById('admMenuSearch').focus();
+      }
+    });
+
     /* Logout Action */
     function promptSimpleLogout() {
       document.getElementById('simpleLogoutModal').style.display = 'flex';
@@ -3632,6 +4024,35 @@
       document.getElementById('authSubmitBtn').innerText = authMode === 'register' ? 'Register' : 'Login';
       document.getElementById('pinInputGroup').style.display = authMode === 'register' ? 'block' : 'none';
       document.getElementById('authModeToggleLink').innerText = authMode === 'register' ? 'Have account? Login' : 'Register';
+      document.getElementById('regCompanyBox').style.display = authMode === 'register' ? 'block' : 'none';
+      if (authMode === 'register') {
+        renderRegCompany();
+        loadCompanyProfile().then(renderRegCompany);
+      }
+    }
+
+    function renderRegCompany() {
+      const p = companyProfile || {};
+      const show = (rowId, valId, val, href) => {
+        const row = document.getElementById(rowId), el = document.getElementById(valId);
+        row.style.display = val ? 'block' : 'none';
+        el.innerText = val || '';
+        if (href && val) el.href = href;
+      };
+      show('regUpiRow', 'regUpiId', p.upi_id);
+      show('regPhoneRow', 'regPhone', p.phone, 'tel:' + String(p.phone || '').replace(/[^\d+]/g, ''));
+      show('regEmailRow', 'regEmail', p.email, 'mailto:' + (p.email || ''));
+      const img = document.getElementById('regQrImg');
+      img.style.display = p.upi_qr ? 'inline-block' : 'none';
+      if (p.upi_qr) img.src = p.upi_qr;
+      document.getElementById('regCompanyEmpty').style.display = (p.upi_id || p.phone || p.email || p.upi_qr) ? 'none' : 'block';
+    }
+
+    function copyRegUpi() {
+      const v = (companyProfile && companyProfile.upi_id) || '';
+      if (!v) return;
+      if (navigator.clipboard) navigator.clipboard.writeText(v).then(() => showToast('UPI ID copied', 'success'), () => showToast(v, 'success'));
+      else showToast(v, 'success');
     }
 
     /* PWA Direct Installation */
