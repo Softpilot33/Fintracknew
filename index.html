@@ -2241,8 +2241,8 @@
         startTenantWatch();
         document.getElementById('auth-screen-container').style.display = 'none';
         document.getElementById('main-app-content').style.display = 'block';
-        document.getElementById('currentUserNameLabel').innerText = currentUser.username;
-        document.getElementById('heroUserName').innerText = currentUser.username;
+        document.getElementById('currentUserNameLabel').innerText = displayName();
+        document.getElementById('heroUserName').innerText = displayName();
         document.getElementById('appBrandTitle').innerText = appTitle;
         
         initUserData();
@@ -3641,16 +3641,24 @@
       return !!(fintrackAuthUser && fintrackAuthUser.app_metadata && fintrackAuthUser.app_metadata.role === 'super_admin');
     }
 
+    // Name shown in the app (never the e-mail): the "Your name" given at registration
+    function displayName() {
+      const m = (fintrackAuthUser && fintrackAuthUser.user_metadata) || {};
+      const n = (m.owner_name || m.name || '').trim();
+      if (n) return n;
+      const u = (currentUser && currentUser.username) || 'User';
+      return u.includes('_at_') ? u.split('_at_')[0] : u;
+    }
+
     function renderMoreHeader() {
-      const meta = (fintrackAuthUser && fintrackAuthUser.user_metadata) || {};
-      const name = meta.owner_name || meta.name || (currentUser && currentUser.username) || 'User';
+      const name = displayName();
       document.getElementById('moreName').innerText = name;
       document.getElementById('moreAvatar').innerText = (String(name).trim()[0] || 'U').toUpperCase();
       document.getElementById('moreRole').innerText = isSuperAdmin() ? 'Admin' : 'Owner';
     }
 
     function openProfileModal() {
-      const name = (currentUser && currentUser.username) || '-';
+      const name = displayName();
       document.getElementById('profAvatar').innerText = (name[0] || 'U').toUpperCase();
       const meta = (fintrackAuthUser && fintrackAuthUser.user_metadata) || {};
       document.getElementById('profUsername').innerText = meta.login_email || name;
@@ -3765,7 +3773,7 @@
 
     function showAdminApp() {
       document.getElementById('admin-app').style.display = 'block';
-      document.getElementById('admUserName').innerText = currentUser.username;
+      document.getElementById('admUserName').innerText = displayName();
       document.getElementById('admUserEmail').innerText = (fintrackAuthUser && fintrackAuthUser.email) || '';
       admGo('overview');
     }
