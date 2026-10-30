@@ -430,9 +430,9 @@
     .adm-foot { border-top: 1px solid #334155; padding: 14px 16px; font-size: 12.5px; color: #94a3b8; }
     .adm-foot b { display: block; color: #fff; font-size: 14px; }
     .adm-foot a { color: #fbbf24; text-decoration: underline; cursor: pointer; font-size: 13.5px; display: inline-block; margin-top: 6px; }
-    .adm-top { position: fixed; top: 0; left: 0; right: 0; height: 52px; background: #1e293b; color: #fff; display: flex; align-items: center; gap: 12px; padding: 0 14px; z-index: 1; }
+    .adm-top { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: #1e293b; color: #fff; display: flex; align-items: center; gap: 12px; padding: 0 14px; z-index: 1; }
     .adm-top button { background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; }
-    .adm-main { position: absolute; top: 52px; bottom: 0; left: 0; right: 0; overflow-y: auto; padding: 14px; }
+    .adm-main { position: absolute; top: 60px; bottom: 0; left: 0; right: 0; overflow-y: auto; padding: 14px; }
     .adm-page { display: none; max-width: 900px; margin: 0 auto; }
     .adm-page h3 { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
     .adm-page .adm-sub { margin-bottom: 12px; }
@@ -446,10 +446,16 @@
     .adm-row:last-child { border-bottom: none; }
     .adm-row small { display: block; color: #94a3b8; font-size: 11px; }
     .adm-pill { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
-    .adm-pill.trial { background: #fef3c7; color: #b45309; } .adm-pill.active { background: #dcfce7; color: #166534; }
+    .adm-pill.trial { background: #e3edf9; color: #1e4a8a; } .adm-pill.active { background: #dcfce7; color: #166534; }
     .adm-pill.expired { background: #fee2e2; color: #b91c1c; } .adm-pill.blocked { background: #e2e8f0; color: #334155; }
     .adm-input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-family: inherit; margin-bottom: 8px; }
     .adm-btn { padding: 9px 14px; border: none; border-radius: 8px; background: #1f5f4a; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+    .adm-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e2e8f0; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+    .adm-cell { background: #fff; padding: 14px 12px; }
+    .adm-cell b { display: block; font-size: 24px; color: #0f172a; }
+    .adm-cell span { font-size: 13px; color: #64748b; }
+    .adm-cell.fill { background: #d9dee6; }
+    .adm-btn-o { display: inline-block; padding: 10px 14px; margin: 0 8px 10px 0; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #0f172a; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
     @media (min-width: 900px) {
       .adm-drawer { transform: none; z-index: 1; }
       .adm-scrim, .adm-scrim.open { display: none; }
@@ -898,7 +904,7 @@
         <div class="adm-logo">₹</div>
         <div><h1>FinTrack</h1><div class="adm-sub" style="margin:0;">Service admin</div></div>
       </div>
-      <input type="text" id="admUsername" class="adm-input" placeholder="Admin username" autocomplete="username">
+      <input type="text" id="admUsername" class="adm-input" placeholder="Admin email or username" autocomplete="username">
       <input type="password" id="admPassword" class="adm-input" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') adminLogin()">
       <button class="adm-btn" style="width:100%; padding:11px;" onclick="adminLogin()">Login</button>
       <div style="text-align:center; margin-top:14px;"><a style="font-size:12px; color:#2563eb; cursor:pointer;" onclick="showAdminLogin(false)">← Back to user login</a></div>
@@ -917,7 +923,7 @@
 
   <!-- Service Admin Console -->
   <div id="admin-app">
-    <div class="adm-top"><button onclick="admToggleDrawer(true)">☰</button><b id="admTopTitle">Overview</b></div>
+    <div class="adm-top"><button onclick="admToggleDrawer(true)">☰</button><div><b id="admTopTitle" style="font-size:17px;">Service overview</b><div style="font-size:12px; color:#94a3b8; margin-top:1px;">Service admin</div></div></div>
     <div class="adm-scrim" id="admScrim" onclick="admToggleDrawer(false)"></div>
     <aside class="adm-drawer" id="admDrawer">
       <div class="adm-brand"><div class="adm-logo">₹</div><div><b>FinTrack</b><span>Service admin</span></div></div>
@@ -940,9 +946,15 @@
 
     <main class="adm-main">
       <section class="adm-page" id="admPage-overview">
-        <h3>Overview</h3><div class="adm-sub">All firms registered on FinTrack.</div>
-        <div class="adm-stats" id="admStats"></div>
-        <div class="adm-box"><div class="adm-box-h">Recent registrations</div><div id="admRecent"></div></div>
+        <h3 style="font-size:24px;">Service overview</h3>
+        <div class="adm-sub" id="admOverviewSub" style="font-size:14px; line-height:1.5;">Loading...</div>
+        <div style="margin-bottom:6px;">
+          <button class="adm-btn-o" onclick="admDownloadCsv('firms')">Download firms (CSV)</button>
+          <button class="adm-btn-o" onclick="admDownloadCsv('payments')">Download payments (CSV)</button>
+        </div>
+        <div class="adm-grid3" id="admStats"></div>
+        <div class="adm-box"><div class="adm-box-h" style="font-size:14px; color:#0f172a; background:#fff;">Renewals due in 30 days</div><div id="admDue"></div></div>
+        <div class="adm-box"><div class="adm-box-h" style="font-size:14px; color:#0f172a; background:#fff;">Newest firms</div><div id="admRecent"></div></div>
       </section>
 
       <section class="adm-page" id="admPage-firms">
@@ -955,8 +967,8 @@
         <h3>Service admins</h3><div class="adm-sub">People who can open this console.</div>
         <div class="adm-box"><div id="admAdminList"></div></div>
         <div class="adm-box" style="padding:12px;">
-          <div style="font-size:12.5px; font-weight:800; margin-bottom:6px;">Make an existing user a service admin</div>
-          <input class="adm-input" id="admNewAdmin" placeholder="Username (lowercase)">
+          <div style="font-size:12.5px; font-weight:800; margin-bottom:6px;">Give admin rights to a registered user</div>
+          <input class="adm-input" id="admNewAdmin" placeholder="Their username or email">
           <button class="adm-btn" onclick="admAddAdmin()">Add admin</button>
         </div>
       </section>
@@ -985,7 +997,7 @@
       <h4 id="admFirmTitle">Firm</h4>
       <div style="text-align:left;">
         <label style="font-size:10.5px; font-weight:700; color:#64748b;">Status</label>
-        <select id="admFirmStatus" class="modal-input-field"><option value="trial">Trial</option><option value="active">Active (paid)</option><option value="blocked">Blocked</option></select>
+        <select id="admFirmStatus" class="modal-input-field"><option value="trial">Trial</option><option value="active">Active (paid)</option><option value="blocked">Suspended</option></select>
         <label style="font-size:10.5px; font-weight:700; color:#64748b;">Valid until (leave empty = no expiry)</label>
         <input type="date" id="admFirmUntil" class="modal-input-field">
         <label style="font-size:10.5px; font-weight:700; color:#64748b;">Payment received now (₹, optional)</label>
@@ -1939,9 +1951,20 @@
     let fintrackAuthUser = null;
     let fintrackSaveTimer = null;
 
-    function fintrackEmail(u) { return `${String(u || "").trim().toLowerCase()}@fintrack.local`; }
+    function fintrackEmail(u) {
+      const v = String(u || "").trim().toLowerCase();
+      return v.includes('@') ? v : `${v}@fintrack.local`;   // admins can log in with a real email
+    }
+
+    // Names nobody may register with (admin accounts are created by the project owner only)
+    function isReservedUsername(u) {
+      const v = String(u || '').trim().toLowerCase();
+      const flat = v.replace(/[\s._-]/g, '');
+      return v.includes('@') || /admin|superuser|root|softpilot|fintrack/.test(flat);
+    }
 
     async function fintrackRegister(username, password, pin) {
+      if (isReservedUsername(username)) throw new Error('This username is reserved. Please choose another username.');
       const cleanUser = String(username).trim().toLowerCase();
       const { data, error } = await fintrackSupabase.auth.signUp({
         email: fintrackEmail(cleanUser),
@@ -3633,7 +3656,7 @@
         document.getElementById('admPage-' + p).style.display = p === page ? 'block' : 'none';
       });
       document.querySelectorAll('#admNav a').forEach(a => a.classList.toggle('active', a.dataset.page === page));
-      const t = { overview: 'Overview', firms: 'Firms', admins: 'Service admins', company: 'Company profile', about: "About & what's new" };
+      const t = { overview: 'Service overview', firms: 'Firms', admins: 'Service admins', company: 'Company profile', about: "About & what's new" };
       document.getElementById('admTopTitle').innerText = t[page];
       admToggleDrawer(false);
       if (page === 'overview' || page === 'firms') admLoadFirms();
@@ -3650,32 +3673,67 @@
     const admFmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
     const admMoney = n => '₹ ' + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    const admLabel = { trial: 'Trial', active: 'Active', expired: 'Expired', blocked: 'Suspended' };
+    let admPayments = [];
+
     async function admLoadFirms() {
       const { data, error } = await fintrackSupabase.from('tenant_registry').select('*').order('created_at', { ascending: false });
       if (error) {
         const msg = 'Firms table is not set up. Run supabase_admin_setup.sql in Supabase.';
         document.getElementById('admStats').innerHTML = '';
-        document.getElementById('admRecent').innerHTML = `<div class="adm-row">${msg}</div>`;
+        document.getElementById('admOverviewSub').innerText = msg;
+        document.getElementById('admDue').innerHTML = '';
+        document.getElementById('admRecent').innerHTML = '';
         document.getElementById('admFirmList').innerHTML = `<div class="adm-row">${msg}</div>`;
         return;
       }
       admFirms = data || [];
+      const pr = await fintrackSupabase.from('tenant_payments').select('*').order('paid_at', { ascending: false });
+      admPayments = pr.error ? [] : (pr.data || []);
       admRenderStats();
       admRenderFirms();
     }
 
     function admRenderStats() {
       const c = { trial: 0, active: 0, expired: 0, blocked: 0 };
-      let paid = 0;
-      admFirms.forEach(f => { c[admFirmState(f)]++; paid += Number(f.amount_paid) || 0; });
-      const card = (n, l) => `<div class="adm-stat"><b>${n}</b><span>${l}</span></div>`;
+      admFirms.forEach(f => { c[admFirmState(f)]++; });
+      const year = new Date().getFullYear();
+      const renewals = admPayments.filter(p => new Date(p.paid_at).getFullYear() === year).reduce((t, p) => t + (Number(p.amount) || 0), 0);
+      document.getElementById('admOverviewSub').innerText =
+        `${admFirms.length} firms, ${admFirms.length} users, renewals this year ${admMoney(renewals)}`;
+      const cell = (n, l) => `<div class="adm-cell"><b>${n}</b><span>${l}</span></div>`;
       document.getElementById('admStats').innerHTML =
-        card(admFirms.length, 'Total firms') + card(c.trial, 'On trial') + card(c.active, 'Active (paid)') +
-        card(c.expired + c.blocked, 'Expired / blocked') +
-        `<div class="adm-stat" style="grid-column:1/3;"><b style="font-size:22px;">${admMoney(paid)}</b><span>Collected so far</span></div>`;
+        cell(admFirms.length, 'All firms') + cell(c.active, 'Active') + cell(c.trial, 'On trial') +
+        cell(c.expired, 'Expired') + cell(c.blocked, 'Suspended') + '<div class="adm-cell fill"></div>';
+
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const limit = new Date(today.getTime() + 30 * 86400000);
+      const due = admFirms.filter(f => f.valid_until && f.status !== 'blocked' && new Date(f.valid_until) >= today && new Date(f.valid_until) <= limit)
+        .sort((a, b) => a.valid_until.localeCompare(b.valid_until));
+      document.getElementById('admDue').innerHTML = due.map(f =>
+        `<div class="adm-row"><div>${escHtml(String(f.username).toUpperCase())}</div><div style="text-align:right;"><span class="adm-pill ${admFirmState(f)}">${admLabel[admFirmState(f)]}</span><small>${admFmtDate(f.valid_until)}</small></div></div>`
+      ).join('') || '<div class="adm-row" style="color:#64748b; padding:16px 14px;">Nothing due.</div>';
+
       document.getElementById('admRecent').innerHTML = admFirms.slice(0, 5).map(f =>
-        `<div class="adm-row"><div>${escHtml(f.username)}<small>${admFmtDate(f.created_at)}</small></div><span class="adm-pill ${admFirmState(f)}">${admFirmState(f)}</span></div>`
+        `<div class="adm-row"><div>${escHtml(String(f.username).toUpperCase())}</div><div style="display:flex; align-items:center; gap:10px;"><span class="adm-pill ${admFirmState(f)}">${admLabel[admFirmState(f)]}</span><span style="color:#64748b; font-size:12.5px;">${admFmtDate(f.created_at)}</span></div></div>`
       ).join('') || '<div class="adm-row">No firms yet</div>';
+    }
+
+    function admDownloadCsv(kind) {
+      const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      let rows;
+      if (kind === 'firms') {
+        rows = [['Username', 'Status', 'Registered', 'Valid until', 'Amount paid', 'Notes']]
+          .concat(admFirms.map(f => [f.username, admLabel[admFirmState(f)], f.created_at, f.valid_until || '', f.amount_paid, f.notes || '']));
+      } else {
+        const name = id => (admFirms.find(f => f.user_id === id) || {}).username || id;
+        rows = [['Firm', 'Amount', 'Paid on']].concat(admPayments.map(p => [name(p.user_id), p.amount, p.paid_at]));
+      }
+      const blob = new Blob([rows.map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `fintrack_${kind}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
     }
 
     function admRenderFirms() {
@@ -3685,7 +3743,7 @@
         const st = admFirmState(f);
         return `<div class="adm-row" style="cursor:pointer;" onclick="admOpenFirm('${f.user_id}')">
           <div>${escHtml(f.username)}<small>Registered ${admFmtDate(f.created_at)} · Valid until ${f.valid_until ? admFmtDate(f.valid_until) : 'no expiry'}</small></div>
-          <span class="adm-pill ${st}">${st}</span></div>`;
+          <span class="adm-pill ${st}">${admLabel[st]}</span></div>`;
       }).join('') || '<div class="adm-row">No firms found</div>';
     }
 
@@ -3714,6 +3772,10 @@
       };
       const { error } = await fintrackSupabase.from('tenant_registry').update(upd).eq('user_id', f.user_id);
       if (error) return showToast('Save failed: ' + error.message, 'error');
+      if (add > 0) {
+        const pe = await fintrackSupabase.from('tenant_payments').insert({ user_id: f.user_id, amount: add });
+        if (pe.error) showToast('Saved, but payment log needs supabase_admin_payments.sql', 'error');
+      }
       closeModal('admFirmModal');
       showToast('Firm updated', 'success');
       admLoadFirms();
@@ -3760,9 +3822,9 @@
         if (st !== 'blocked' && st !== 'expired') return false;
         await loadCompanyProfile();
         const p = companyProfile || {};
-        document.getElementById('lockTitle').innerText = st === 'blocked' ? 'Account blocked' : 'Subscription ended';
+        document.getElementById('lockTitle').innerText = st === 'blocked' ? 'Account suspended' : 'Subscription ended';
         document.getElementById('lockMsg').innerText = st === 'blocked'
-          ? 'Your account is blocked. Please contact us.'
+          ? 'Your account is suspended. Please contact us.'
           : 'Your trial / subscription has ended. Pay the amount below and contact us to continue.';
         document.getElementById('lockCompany').innerHTML =
           (p.upi_qr ? `<div style="text-align:center;"><img src="${p.upi_qr}" style="max-width:170px; width:100%; border:1px solid #e2e8f0; border-radius:10px; padding:5px;"></div>` : '') +
@@ -4002,6 +4064,7 @@
       const p = document.getElementById('loginPassword').value.trim();
       const pin = document.getElementById('userRecoveryPin').value.trim();
       if (!u || !p) return showToast("Fill all credentials", "error");
+      if (authMode === 'register' && isReservedUsername(u)) return showToast("This username is reserved. Choose another username.", "error");
       if (authMode === 'register' && !/^\d{4}$/.test(pin)) return showToast("Enter a 4-digit Recovery PIN (needed for password reset)", "error");
 
       try {
