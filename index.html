@@ -465,6 +465,18 @@
     .adm-pill.expired { background: #fee2e2; color: #b91c1c; } .adm-pill.blocked { background: #e2e8f0; color: #334155; }
     .adm-input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-family: inherit; margin-bottom: 8px; }
     .adm-btn { padding: 9px 14px; border: none; border-radius: 8px; background: #1f5f4a; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+    .fd-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+    @media (max-width: 899px) { .fd-grid { grid-template-columns: 1fr; } }
+    .fd-h { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+    .fd-l { display: block; font-size: 12.5px; font-weight: 600; color: #1f2937; margin: 14px 0 5px; }
+    .fd-i { width: 100%; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; color: #0f172a; }
+    textarea.fd-i { resize: vertical; }
+    .fd-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .fd-hr { border: none; border-top: 1px solid #e2e8f0; margin: 18px 0 4px; }
+    .fd-bh { padding: 12px 16px; font-size: 13.5px; font-weight: 800; color: #0f172a; border-bottom: 1px solid #eef2f6; }
+    .fd-b { padding: 14px 16px; font-size: 13.5px; }
+    .fd-u { display: flex; gap: 22px; padding: 4px 0; font-size: 13px; }
+    .fd-u span:first-child { width: 110px; color: #1e4a8a; }
     .adm-flabel { display: block; font-size: 13px; font-weight: 700; color: #1f2937; margin: 14px 0 6px; }
     .adm-fhint { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
     .adm-input.adm-big { padding: 11px 12px; border-radius: 8px; font-size: 14.5px; background: #fff; margin-bottom: 8px; }
@@ -1002,7 +1014,7 @@
       </div>
     </aside>
 
-    <main class="adm-main">
+    <main class="adm-main" id="admMain">
       <section class="adm-page" id="admPage-overview">
         <h3 style="font-size:24px;">Service overview</h3>
         <div class="adm-sub" id="admOverviewSub" style="font-size:14px; line-height:1.5;">Loading...</div>
@@ -1034,6 +1046,88 @@
             <thead><tr><th>Firm</th><th>Contact</th><th>Status</th><th class="r">Valid until</th><th class="r">Users</th><th class="r">Last login</th><th class="r">Data</th></tr></thead>
             <tbody id="admFirmList"></tbody>
           </table>
+        </div>
+      </section>
+
+      <section class="adm-page" id="admPage-firm" style="max-width:1200px;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px;">
+          <div style="min-width:0;">
+            <h3 id="fdTitle" style="font-size:24px; margin:0 0 4px;">Firm</h3>
+            <div class="adm-sub" id="fdSub" style="margin:0;"></div>
+          </div>
+          <button class="adm-btn-o" style="margin:0; flex-shrink:0;" onclick="admGo('firms')">All firms</button>
+        </div>
+        <div style="margin-bottom:14px;"><button class="adm-btn-o" onclick="admDownloadFirmBackup()">Download backup</button></div>
+
+        <div class="fd-grid">
+          <div>
+            <div class="adm-box" style="padding:18px;">
+              <div class="fd-h">Firm</div>
+              <label class="fd-l">Firm name</label>
+              <input class="fd-i" id="fdFirm" type="text">
+              <div class="fd-2">
+                <div><label class="fd-l">Contact person</label><input class="fd-i" id="fdOwner" type="text"></div>
+                <div><label class="fd-l">Phone</label><input class="fd-i" id="fdMobile" type="tel"></div>
+              </div>
+              <label class="fd-l">E-mail</label>
+              <input class="fd-i" id="fdEmail" type="email">
+              <label class="fd-l">Address</label>
+              <textarea class="fd-i" id="fdAddress" rows="3"></textarea>
+              <hr class="fd-hr">
+              <div class="fd-2">
+                <div><label class="fd-l">Status</label>
+                  <select class="fd-i" id="fdStatus"><option value="trial">Trial</option><option value="active">Active</option><option value="blocked">Suspended</option></select></div>
+                <div><label class="fd-l">Valid until</label><input class="fd-i" id="fdUntil" type="date"></div>
+              </div>
+              <label class="fd-l">Notes</label>
+              <input class="fd-i" id="fdNotes" type="text">
+              <button class="adm-btn" style="background:#1f2937; padding:10px 16px; margin-top:16px;" onclick="admSaveFirm()">Save firm</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="adm-box"><div class="fd-bh">Usage</div><div class="fd-b" id="fdUsage">Loading...</div></div>
+
+            <div class="adm-box"><div class="fd-bh">Users</div>
+              <div class="fd-b">
+                <div style="display:flex; justify-content:space-between; gap:10px; font-size:13.5px;">
+                  <div><span id="fdUserName"></span><small id="fdUserEmail" style="display:block; color:#6b7280; font-size:12px;"></small></div>
+                  <span style="color:#334155;">Administrator</span>
+                </div>
+                <div style="margin-top:12px; border-top:1px solid #eef2f6; padding-top:10px;">
+                  <label class="fd-l" style="margin-top:0;">Reset password (min 6 characters)</label>
+                  <div style="display:flex; gap:8px;">
+                    <input class="fd-i" id="fdNewPass" type="text" autocomplete="off" placeholder="New password" style="margin:0;">
+                    <button class="adm-btn-o" style="margin:0; white-space:nowrap;" onclick="admResetFirmPassword()">Reset</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="adm-box"><div class="fd-bh">Record a renewal</div>
+              <div class="fd-b">
+                <div class="fd-2">
+                  <div><label class="fd-l" style="margin-top:0;">From</label><input class="fd-i" id="fdRnFrom" type="date"></div>
+                  <div><label class="fd-l" style="margin-top:0;">Until</label><input class="fd-i" id="fdRnUntil" type="date"></div>
+                  <div><label class="fd-l">Amount received</label><input class="fd-i" id="fdRnAmt" type="number" inputmode="decimal"></div>
+                  <div><label class="fd-l">Paid by</label><select class="fd-i" id="fdRnBy"><option>UPI</option><option>Cash</option><option>Bank transfer</option></select></div>
+                </div>
+                <label class="fd-l">Note</label>
+                <input class="fd-i" id="fdRnNote" type="text">
+                <button class="adm-btn" style="background:#1f2937; padding:10px 14px; margin-top:14px;" onclick="admSaveRenewal()">Save renewal and extend validity</button>
+              </div>
+            </div>
+
+            <div class="adm-box"><div class="fd-bh">Renewal history</div><div id="fdHistory"><div class="fd-b" style="color:#64748b;">None yet.</div></div></div>
+
+            <div class="adm-box" style="border-color:#f3c4c4;">
+              <div class="fd-bh" style="color:#9f1d1d; background:#fff; border-bottom:none; padding-bottom:0;">Delete firm</div>
+              <div class="fd-b" style="padding-top:8px;">
+                <div style="font-size:13px; color:#475569; margin-bottom:12px; line-height:1.5;">Removes the firm and its login. To stop access for a while instead, set the status to Suspended.</div>
+                <button class="adm-btn" style="background:#9f1d1d;" onclick="admDeleteFirm()">Delete this firm…</button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1111,32 +1205,6 @@
   </div>
 
   <!-- Firm edit modal -->
-  <div class="modal-overlay" id="admFirmModal">
-    <div class="modal-box">
-      <h4 id="admFirmTitle">Firm</h4>
-      <div id="admFirmInfo" style="text-align:left; font-size:12px; line-height:1.7; color:#334155; margin-bottom:10px;"></div>
-      <div style="text-align:left;">
-        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Status</label>
-        <select id="admFirmStatus" class="modal-input-field"><option value="trial">Trial</option><option value="active">Active (paid)</option><option value="blocked">Suspended</option></select>
-        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Valid until (leave empty = no expiry)</label>
-        <input type="date" id="admFirmUntil" class="modal-input-field">
-        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Or give days from today (overrides the date)</label>
-        <input type="number" id="admFirmDays" class="modal-input-field" inputmode="numeric" min="0" placeholder="e.g. 15 or 365">
-        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Payment received now (₹, optional)</label>
-        <input type="number" id="admFirmPay" class="modal-input-field" inputmode="decimal" placeholder="0">
-        <div style="font-size:11px; color:#64748b; margin-bottom:6px;">Total collected so far: ₹<span id="admFirmPaid">0</span></div>
-        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Notes</label>
-        <input type="text" id="admFirmNotes" class="modal-input-field" placeholder="Notes">
-        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Reset password (optional, min 6 characters)</label>
-        <input type="text" id="admFirmNewPass" class="modal-input-field" placeholder="New password for this firm" autocomplete="off">
-      </div>
-      <div class="modal-actions">
-        <button class="modal-btn modal-cancel-btn" style="flex:1;" onclick="closeModal('admFirmModal')">Cancel</button>
-        <button class="modal-btn" style="flex:1; background:#1f5f4a; color:#fff;" onclick="admSaveFirm()">Save</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Main Application Wrapper -->
   <div id="main-app-content" style="display:none;">
     
@@ -3789,14 +3857,15 @@
     }
 
     function admGo(page) {
-      ['overview', 'firms', 'admins', 'password', 'company', 'about'].forEach(p => {
+      ['overview', 'firms', 'firm', 'admins', 'password', 'company', 'about'].forEach(p => {
         document.getElementById('admPage-' + p).style.display = p === page ? 'block' : 'none';
       });
-      document.querySelectorAll('#admNav a').forEach(a => a.classList.toggle('active', a.dataset.page === page));
-      const t = { overview: 'Service overview', firms: 'Firms', admins: 'Service admins', password: 'Change password', company: 'Company profile', about: "About & what's new" };
+      document.querySelectorAll('#admNav a').forEach(a => a.classList.toggle('active', a.dataset.page === (page === 'firm' ? 'firms' : page)));
+      const t = { overview: 'Service overview', firms: 'Firms', firm: 'Firm', admins: 'Service admins', password: 'Change password', company: 'Company profile', about: "About & what's new" };
       document.getElementById('admTopTitle').innerText = t[page];
       admToggleDrawer(false);
       if (page === 'overview' || page === 'firms') admLoadFirms();
+      document.getElementById('admMain') && (document.getElementById('admMain').scrollTop = 0);
       if (page === 'admins') admLoadAdmins();
       if (page === 'company') admRenderCompany();
     }
@@ -3918,45 +3987,121 @@
       const f = admFirms.find(x => x.user_id === id);
       if (!f) return;
       admCurrentFirm = f;
-      document.getElementById('admFirmTitle').innerText = admName(f);
-      document.getElementById('admFirmInfo').innerHTML = [['Owner', f.owner_name], ['Mobile', f.mobile], ['E-mail', f.email], ['Business', f.business_type], ['Address', f.address]].filter(x => x[1]).map(x => `<div><b>${x[0]}:</b> ${escHtml(x[1])}</div>`).join('');
-      document.getElementById('admFirmStatus').value = f.status || 'trial';
-      document.getElementById('admFirmUntil').value = f.valid_until || '';
-      document.getElementById('admFirmPay').value = '';
-      document.getElementById('admFirmDays').value = '';
-      document.getElementById('admFirmPaid').innerText = Number(f.amount_paid) || 0;
-      document.getElementById('admFirmNotes').value = f.notes || '';
-      document.getElementById('admFirmNewPass').value = '';
-      document.getElementById('admFirmModal').style.display = 'flex';
+      admGo('firm');
+      admFillFirm();
+      admLoadFirmExtras();
+    }
+
+    function admFillFirm() {
+      const f = admCurrentFirm;
+      const st = admFirmState(f);
+      document.getElementById('fdTitle').innerText = String(admName(f)).toUpperCase();
+      document.getElementById('fdSub').innerHTML = `Code ${escHtml(f.username)}, registered ${admFmtDate(f.created_at)}, <span class="adm-pill ${st}">${admLabel[st]}</span>`;
+      const set = (id, v) => document.getElementById(id).value = v || '';
+      set('fdFirm', f.firm_name); set('fdOwner', f.owner_name); set('fdMobile', f.mobile); set('fdEmail', f.email);
+      set('fdAddress', f.address); set('fdStatus', f.status || 'trial'); set('fdUntil', f.valid_until); set('fdNotes', f.notes);
+      document.getElementById('fdUserName').innerText = f.owner_name || admName(f);
+      document.getElementById('fdUserEmail').innerText = f.email || f.username;
+      document.getElementById('fdNewPass').value = '';
+      // renewal defaults: start where the current validity ends (or today), run for one year
+      const start = (f.valid_until && f.valid_until >= todayIso()) ? f.valid_until : todayIso();
+      const d = new Date(start + 'T00:00:00'); d.setFullYear(d.getFullYear() + 1);
+      set('fdRnFrom', start);
+      set('fdRnUntil', d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
+      set('fdRnAmt', ''); set('fdRnNote', '');
+      document.getElementById('fdUsage').innerText = 'Loading...';
+    }
+
+    async function admLoadFirmExtras() {
+      const f = admCurrentFirm;
+      const u = await fintrackSupabase.rpc('admin_firm_usage', { p_user_id: f.user_id });
+      if (admCurrentFirm !== f) return;
+      if (u.error || !u.data) {
+        document.getElementById('fdUsage').innerHTML = '<span style="color:#64748b;">Run supabase_firm_detail.sql to see usage.</span>';
+      } else {
+        const d = u.data;
+        const row = (l, v) => `<div class="fd-u"><span>${l}</span><span>${v}</span></div>`;
+        document.getElementById('fdUsage').innerHTML =
+          row('Entries', d.entries || 0) + row('Last entry', d.last_entry ? admFmtDate(d.last_entry) : '-') +
+          row('Receivables', d.receivables || 0) + row('Payables', d.payables || 0) + row('Database size', admFmtSize(d.size));
+      }
+      const h = await fintrackSupabase.from('tenant_payments').select('*').eq('user_id', f.user_id).order('paid_at', { ascending: false });
+      const box = document.getElementById('fdHistory');
+      const rows = h.error ? [] : (h.data || []);
+      box.innerHTML = rows.length ? rows.map(p =>
+        `<div class="adm-row" style="align-items:flex-start;"><div>${admFmtDate(p.paid_at)}<small>${p.from_date && p.until_date ? admFmtDate(p.from_date) + ' → ' + admFmtDate(p.until_date) : ''}${p.paid_by ? ' · ' + escHtml(p.paid_by) : ''}${p.note ? ' · ' + escHtml(p.note) : ''}</small></div><b>${admMoney(p.amount)}</b></div>`
+      ).join('') : '<div class="fd-b" style="color:#64748b;">None yet.</div>';
     }
 
     async function admSaveFirm() {
       const f = admCurrentFirm;
       if (!f) return;
-      const add = parseFloat(document.getElementById('admFirmPay').value) || 0;
+      const v = id => document.getElementById(id).value.trim();
       const upd = {
-        status: document.getElementById('admFirmStatus').value,
-        valid_until: (parseInt(document.getElementById('admFirmDays').value, 10) > 0) ? todayIso(parseInt(document.getElementById('admFirmDays').value, 10)) : (document.getElementById('admFirmUntil').value || null),
-        amount_paid: (Number(f.amount_paid) || 0) + add,
-        notes: document.getElementById('admFirmNotes').value.trim()
+        firm_name: v('fdFirm'), owner_name: v('fdOwner'), mobile: v('fdMobile'), email: v('fdEmail'), address: v('fdAddress'),
+        status: document.getElementById('fdStatus').value, valid_until: document.getElementById('fdUntil').value || null, notes: v('fdNotes')
       };
       const { error } = await fintrackSupabase.from('tenant_registry').update(upd).eq('user_id', f.user_id);
       if (error) return showToast('Save failed: ' + error.message, 'error');
-      if (add > 0) {
-        const pe = await fintrackSupabase.from('tenant_payments').insert({ user_id: f.user_id, amount: add });
-        if (pe.error) showToast('Saved, but payment log needs supabase_admin_payments.sql', 'error');
-      }
-      const np = document.getElementById('admFirmNewPass').value.trim();
-      if (np) {
-        if (np.length < 6) return showToast('New password must be at least 6 characters', 'error');
-        const pr = await fintrackSupabase.rpc('admin_reset_password', { p_user_id: f.user_id, p_new_password: np });
-        if (pr.error) return showToast('Password reset failed: ' + pr.error.message, 'error');
-        showToast('Password reset. Tell the firm the new password.', 'success');
-      } else {
-        showToast('Firm updated', 'success');
-      }
-      closeModal('admFirmModal');
-      admLoadFirms();
+      Object.assign(f, upd);
+      admFillFirm();
+      admLoadFirmExtras();
+      showToast('Firm saved', 'success');
+    }
+
+    async function admSaveRenewal() {
+      const f = admCurrentFirm;
+      if (!f) return;
+      const from = document.getElementById('fdRnFrom').value;
+      const until = document.getElementById('fdRnUntil').value;
+      const amt = parseFloat(document.getElementById('fdRnAmt').value) || 0;
+      if (!from || !until) return showToast('Select From and Until dates', 'error');
+      if (until <= from) return showToast('Until must be after From', 'error');
+      const pay = await fintrackSupabase.from('tenant_payments').insert({
+        user_id: f.user_id, amount: amt, from_date: from, until_date: until,
+        paid_by: document.getElementById('fdRnBy').value, note: document.getElementById('fdRnNote').value.trim()
+      });
+      if (pay.error) return showToast('Renewal not saved. Run supabase_firm_detail.sql. ' + pay.error.message, 'error');
+      const upd = { status: 'active', valid_until: until, amount_paid: (Number(f.amount_paid) || 0) + amt };
+      const { error } = await fintrackSupabase.from('tenant_registry').update(upd).eq('user_id', f.user_id);
+      if (error) return showToast('Save failed: ' + error.message, 'error');
+      Object.assign(f, upd);
+      admFillFirm();
+      admLoadFirmExtras();
+      showToast('Renewal saved. Valid until ' + admFmtDate(until), 'success');
+    }
+
+    async function admResetFirmPassword() {
+      const f = admCurrentFirm;
+      const np = document.getElementById('fdNewPass').value.trim();
+      if (!f) return;
+      if (np.length < 6) return showToast('New password must be at least 6 characters', 'error');
+      const { error } = await fintrackSupabase.rpc('admin_reset_password', { p_user_id: f.user_id, p_new_password: np });
+      if (error) return showToast('Password reset failed: ' + error.message, 'error');
+      document.getElementById('fdNewPass').value = '';
+      showToast('Password reset. Tell the firm the new password.', 'success');
+    }
+
+    async function admDownloadFirmBackup() {
+      const f = admCurrentFirm;
+      if (!f) return;
+      const { data, error } = await fintrackSupabase.rpc('admin_firm_backup', { p_user_id: f.user_id });
+      if (error || !data) return showToast('Backup failed. Run supabase_firm_detail.sql. ' + (error ? error.message : ''), 'error');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      a.download = `fintrack_backup_${f.username}_${todayIso()}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    async function admDeleteFirm() {
+      const f = admCurrentFirm;
+      if (!f) return;
+      if (!confirm('Delete "' + admName(f) + '" and its login permanently? This cannot be undone.')) return;
+      if ((prompt('Type DELETE to confirm') || '').trim() !== 'DELETE') return showToast('Not deleted', 'error');
+      const { error } = await fintrackSupabase.rpc('admin_delete_firm', { p_user_id: f.user_id });
+      if (error) return showToast('Delete failed: ' + error.message, 'error');
+      showToast('Firm deleted', 'success');
+      admGo('firms');
     }
 
     let admAdmins = [];
