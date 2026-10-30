@@ -827,6 +827,7 @@
     .more-panel .more-head:first-of-type { margin-top: 4px; }
     .more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .more-tile { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; cursor: pointer; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+    body.role-staff .owner-only { display: none !important; }
     .more-tile:active { background: #f6f8f7; }
     .more-tile span { font-size: 14px; font-weight: 600; color: #1f2937; line-height: 1.25; }
     .more-ic { width: 22px; height: 22px; color: #1f5f4a; }
@@ -1057,7 +1058,7 @@
           </div>
           <button class="adm-btn-o" style="margin:0; flex-shrink:0;" onclick="admGo('firms')">All firms</button>
         </div>
-        <div style="margin-bottom:14px;"><button class="adm-btn-o" onclick="admDownloadFirmBackup()">Download backup</button></div>
+        <div style="margin-bottom:14px;"><button class="adm-btn-o" onclick="admDownloadFirmBackup()">Download backup</button><button class="adm-btn-o" onclick="admOpenLoginDialog()">Add login</button></div>
 
         <div class="fd-grid">
           <div>
@@ -1088,20 +1089,9 @@
           <div>
             <div class="adm-box"><div class="fd-bh">Usage</div><div class="fd-b" id="fdUsage">Loading...</div></div>
 
-            <div class="adm-box"><div class="fd-bh">Users</div>
-              <div class="fd-b">
-                <div style="display:flex; justify-content:space-between; gap:10px; font-size:13.5px;">
-                  <div><span id="fdUserName"></span><small id="fdUserEmail" style="display:block; color:#6b7280; font-size:12px;"></small></div>
-                  <span style="color:#334155;">Administrator</span>
-                </div>
-                <div style="margin-top:12px; border-top:1px solid #eef2f6; padding-top:10px;">
-                  <label class="fd-l" style="margin-top:0;">Reset password (min 6 characters)</label>
-                  <div style="display:flex; gap:8px;">
-                    <input class="fd-i" id="fdNewPass" type="text" autocomplete="off" placeholder="New password" style="margin:0;">
-                    <button class="adm-btn-o" style="margin:0; white-space:nowrap;" onclick="admResetFirmPassword()">Reset</button>
-                  </div>
-                </div>
-              </div>
+            <div class="adm-box">
+              <div class="fd-bh" style="display:flex; justify-content:space-between; align-items:center;">Users <a style="color:#1e3a5f; text-decoration:underline; cursor:pointer; font-size:13px;" onclick="admOpenLoginDialog()">Add</a></div>
+              <div id="fdUsers"><div class="fd-b" style="color:#64748b;">Loading...</div></div>
             </div>
 
             <div class="adm-box"><div class="fd-bh">Record a renewal</div>
@@ -1177,6 +1167,31 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- New login for a firm -->
+  <div id="admLoginDlg" class="adm-dlg-overlay">
+    <div class="adm-dlg">
+      <div class="adm-dlg-head"><b id="admLoginTitle">New login</b><button onclick="admCloseLoginDialog()" aria-label="Close">×</button></div>
+      <div class="adm-dlg-body">
+        <label class="adm-flabel" style="margin-top:0;">Name</label>
+        <input type="text" class="adm-input adm-big" id="alName" autocomplete="off">
+        <div class="fd-2">
+          <div><label class="adm-flabel">E-mail</label><input type="email" class="adm-input adm-big" id="alEmail" autocomplete="off" style="margin-bottom:4px;"></div>
+          <div><label class="adm-flabel">Mobile</label><input type="tel" class="adm-input adm-big" id="alMobile" autocomplete="off" style="margin-bottom:4px;"></div>
+        </div>
+        <div class="adm-fhint">Used to log in</div>
+        <label class="adm-flabel">Role</label>
+        <select class="adm-input adm-big" id="alRole"><option value="administrator">Administrator</option><option value="staff">Staff (no backup / restore / header title)</option></select>
+        <label class="adm-flabel">Password</label>
+        <input type="password" class="adm-input adm-big" id="alPass" autocomplete="new-password" style="margin-bottom:4px;">
+        <div class="adm-fhint">At least 6 characters. Tell the user to change it.</div>
+      </div>
+      <div class="adm-dlg-foot">
+        <button class="adm-btn-o" style="margin:0;" onclick="admCloseLoginDialog()">Cancel</button>
+        <button class="adm-btn" style="background:#1f2937; padding:10px 16px;" id="alSave" onclick="admAddLogin()">Add login</button>
+      </div>
+    </div>
   </div>
 
   <!-- New / edit service admin -->
@@ -1719,9 +1734,9 @@
 
         <div class="more-head">Settings</div>
         <div class="more-grid">
-        <div class="more-tile" onclick="exportDataBackup()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></svg><span>Backup & Export JSON</span></div>
-        <div class="more-tile" onclick="document.getElementById('importBackupFile').click()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5V4.5M7.5 9L12 4.5 16.5 9M5 19.5h14"/></svg><span>Restore & Import JSON</span></div>
-        <div class="more-tile" onclick="openAppNameModal()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg><span>Edit App Header Title</span></div>
+        <div class="more-tile owner-only" onclick="exportDataBackup()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></svg><span>Backup & Export JSON</span></div>
+        <div class="more-tile owner-only" onclick="document.getElementById('importBackupFile').click()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5V4.5M7.5 9L12 4.5 16.5 9M5 19.5h14"/></svg><span>Restore & Import JSON</span></div>
+        <div class="more-tile owner-only" onclick="openAppNameModal()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg><span>Edit App Header Title</span></div>
         <div class="more-tile" onclick="openChangePasswordModal()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Change Password</span></div>
         <div class="more-tile" id="installSettingsItem" onclick="installFinTrack()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 8v6M9.5 11.5L12 14l2.5-2.5"/></svg><span>Install App</span></div>
         </div>
@@ -2196,7 +2211,7 @@
     async function saveToSupabase(showNotify = true) {
       if (!fintrackAuthUser) return false;
       const row = {
-        user_id: fintrackAuthUser.id,
+        user_id: dataOwnerId(),
         sheets: Array.isArray(sheets) ? sheets : [],
         receivables: Array.isArray(receivables) ? receivables : [],
         payables: Array.isArray(payables) ? payables : [],
@@ -2229,7 +2244,7 @@
 
     async function loadFromSupabase() {
       if (!fintrackAuthUser) return false;
-      const { data } = await fintrackSupabase.from("fintrack_data").select("*").eq("user_id", fintrackAuthUser.id).maybeSingle();
+      const { data } = await fintrackSupabase.from("fintrack_data").select("*").eq("user_id", dataOwnerId()).maybeSingle();
       if (data) {
         if (data.sheets && data.sheets.length > 0) sheets = data.sheets;
         receivables = Array.isArray(data.receivables) ? data.receivables : [];
@@ -2305,6 +2320,7 @@
           return;
         }
         document.getElementById('tenantLockScreen').style.display = 'none';
+        document.body.classList.toggle('role-staff', isStaffLogin());
         renderTrialBanner();
         startTenantWatch();
         document.getElementById('auth-screen-container').style.display = 'none';
@@ -2316,7 +2332,7 @@
         initUserData();
         await loadFromSupabase();
       } else {
-        document.body.classList.remove('app-locked');
+        document.body.classList.remove('app-locked', 'role-staff');
         tenantInfo = null;
         document.getElementById('admin-app').style.display = 'none';
         document.getElementById('tenantLockScreen').style.display = 'none';
@@ -3705,6 +3721,16 @@
     let companyProfile = (function () { try { return JSON.parse(localStorage.getItem('fintrack_company_profile')) || {}; } catch (e) { return {}; } })();
 
     // Role comes from Supabase app_metadata, which only the project owner can set (users cannot edit it)
+    // A login added by the Service admin under a firm shares that firm's data (firm_id is set by the admin and cannot be edited by the user)
+    function dataOwnerId() {
+      const am = (fintrackAuthUser && fintrackAuthUser.app_metadata) || {};
+      return am.firm_id || (fintrackAuthUser && fintrackAuthUser.id);
+    }
+    function isStaffLogin() {
+      const am = (fintrackAuthUser && fintrackAuthUser.app_metadata) || {};
+      return !!am.firm_id && am.firm_role === 'staff';
+    }
+
     function isSuperAdmin() {
       return !!(fintrackAuthUser && fintrackAuthUser.app_metadata && fintrackAuthUser.app_metadata.role === 'super_admin');
     }
@@ -3722,7 +3748,7 @@
       const name = displayName();
       document.getElementById('moreName').innerText = name;
       document.getElementById('moreAvatar').innerText = (String(name).trim()[0] || 'U').toUpperCase();
-      document.getElementById('moreRole').innerText = isSuperAdmin() ? 'Admin' : 'Owner';
+      document.getElementById('moreRole').innerText = isSuperAdmin() ? 'Admin' : (isStaffLogin() ? 'Staff' : 'Owner');
     }
 
     function openProfileModal() {
@@ -4000,9 +4026,6 @@
       const set = (id, v) => document.getElementById(id).value = v || '';
       set('fdFirm', f.firm_name); set('fdOwner', f.owner_name); set('fdMobile', f.mobile); set('fdEmail', f.email);
       set('fdAddress', f.address); set('fdStatus', f.status || 'trial'); set('fdUntil', f.valid_until); set('fdNotes', f.notes);
-      document.getElementById('fdUserName').innerText = f.owner_name || admName(f);
-      document.getElementById('fdUserEmail').innerText = f.email || f.username;
-      document.getElementById('fdNewPass').value = '';
       // renewal defaults: start where the current validity ends (or today), run for one year
       const start = (f.valid_until && f.valid_until >= todayIso()) ? f.valid_until : todayIso();
       const d = new Date(start + 'T00:00:00'); d.setFullYear(d.getFullYear() + 1);
@@ -4014,6 +4037,7 @@
 
     async function admLoadFirmExtras() {
       const f = admCurrentFirm;
+      admLoadFirmLogins();
       const u = await fintrackSupabase.rpc('admin_firm_usage', { p_user_id: f.user_id });
       if (admCurrentFirm !== f) return;
       if (u.error || !u.data) {
@@ -4071,15 +4095,84 @@
       showToast('Renewal saved. Valid until ' + admFmtDate(until), 'success');
     }
 
-    async function admResetFirmPassword() {
+    async function admLoadFirmLogins() {
       const f = admCurrentFirm;
-      const np = document.getElementById('fdNewPass').value.trim();
-      if (!f) return;
-      if (np.length < 6) return showToast('New password must be at least 6 characters', 'error');
-      const { error } = await fintrackSupabase.rpc('admin_reset_password', { p_user_id: f.user_id, p_new_password: np });
+      const box = document.getElementById('fdUsers');
+      const { data, error } = await fintrackSupabase.rpc('admin_firm_logins', { p_firm_id: f.user_id });
+      if (admCurrentFirm !== f) return;
+      if (error) {
+        box.innerHTML = `<div class="adm-row"><div>${escHtml(f.owner_name || admName(f))}<small>${escHtml(f.email || f.username)}</small></div><span>Administrator</span></div><div class="fd-b" style="color:#64748b; font-size:12px;">Run supabase_firm_logins.sql to add and manage logins.</div>`;
+        return;
+      }
+      admFirmLogins = data || [];
+      box.innerHTML = admFirmLogins.map((u, i) =>
+        `<div class="adm-row" style="align-items:flex-start;">
+          <div style="min-width:0;">${escHtml(u.name || '-')}<small style="word-break:break-all;">${escHtml(u.email)}${u.mobile ? ' · ' + escHtml(u.mobile) : ''}</small></div>
+          <div style="text-align:right; white-space:nowrap;"><div style="font-size:12.5px; color:#334155;">${u.role === 'staff' ? 'Staff' : 'Administrator'}</div>
+            <a style="font-size:12px; color:#1e3a5f; text-decoration:underline; cursor:pointer;" onclick="admResetLoginPassword(${i})">Reset password</a>${u.is_owner ? '' : ` · <a style="font-size:12px; color:#9f1d1d; text-decoration:underline; cursor:pointer;" onclick="admRemoveLogin(${i})">Remove</a>`}</div>
+        </div>`).join('') || '<div class="fd-b" style="color:#64748b;">No logins</div>';
+    }
+    let admFirmLogins = [];
+
+    async function admResetLoginPassword(i) {
+      const u = admFirmLogins[i];
+      if (!u) return;
+      const np = (prompt('New password for ' + (u.name || u.email) + ' (min 6 characters)') || '').trim();
+      if (!np) return;
+      if (np.length < 6) return showToast('Password must be at least 6 characters', 'error');
+      const { error } = await fintrackSupabase.rpc('admin_reset_password', { p_user_id: u.user_id, p_new_password: np });
       if (error) return showToast('Password reset failed: ' + error.message, 'error');
-      document.getElementById('fdNewPass').value = '';
-      showToast('Password reset. Tell the firm the new password.', 'success');
+      showToast('Password reset. Tell the user the new password.', 'success');
+    }
+
+    async function admRemoveLogin(i) {
+      const u = admFirmLogins[i];
+      if (!u || u.is_owner) return;
+      if (!confirm('Remove login ' + u.email + '?')) return;
+      const { error } = await fintrackSupabase.rpc('admin_remove_login', { p_user_id: u.user_id });
+      if (error) return showToast(error.message, 'error');
+      showToast('Login removed', 'success');
+      admLoadFirmLogins();
+    }
+
+    function admOpenLoginDialog() {
+      if (!admCurrentFirm) return;
+      document.getElementById('admLoginTitle').innerText = 'New login for ' + String(admName(admCurrentFirm)).toUpperCase();
+      ['alName', 'alEmail', 'alMobile', 'alPass'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('alRole').value = 'administrator';
+      document.getElementById('admLoginDlg').style.display = 'flex';
+    }
+    function admCloseLoginDialog() { document.getElementById('admLoginDlg').style.display = 'none'; }
+
+    async function admAddLogin() {
+      const f = admCurrentFirm;
+      if (!f) return;
+      const name = document.getElementById('alName').value.trim();
+      const email = document.getElementById('alEmail').value.trim().toLowerCase();
+      const mobile = document.getElementById('alMobile').value.trim();
+      const role = document.getElementById('alRole').value;
+      const pass = document.getElementById('alPass').value;
+      if (!name) return showToast('Enter name', 'error');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showToast('Enter a valid e-mail', 'error');
+      if (pass.length < 6) return showToast('Password must be at least 6 characters', 'error');
+      const btn = document.getElementById('alSave');
+      btn.disabled = true;
+      try {
+        const key = fintrackUserKey(email);
+        const authEmail = `${key}@fintrack.local`;
+        // separate client so the Service admin stays logged in
+        const tmp = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'fintrack-tmp-signup' } });
+        const { data, error } = await tmp.auth.signUp({ email: authEmail, password: pass, options: { data: { username: key, login_email: email, name, owner_name: name, mobile } } });
+        if (error) return showToast(error.message, 'error');
+        if (data.user && data.user.identities && data.user.identities.length === 0) return showToast('This e-mail is already registered', 'error');
+        const r = await fintrackSupabase.rpc('admin_link_login', { p_email: authEmail, p_firm_id: f.user_id, p_role: role });
+        if (r.error) return showToast(r.error.message, 'error');
+        showToast('Login added. Tell the user their e-mail and password.', 'success');
+        admCloseLoginDialog();
+        admLoadFirmLogins();
+      } catch (e) {
+        showToast(e.message || 'Failed', 'error');
+      } finally { btn.disabled = false; }
     }
 
     async function admDownloadFirmBackup() {
@@ -4223,13 +4316,13 @@
     async function fetchTenantRow() {
       const key = 'fintrack_lock_cache';
       try {
-        const { data, error } = await fintrackSupabase.from('tenant_registry').select('status,valid_until').eq('user_id', fintrackAuthUser.id).maybeSingle();
+        const { data, error } = await fintrackSupabase.from('tenant_registry').select('status,valid_until').eq('user_id', dataOwnerId()).maybeSingle();
         if (error) throw error;
-        if (data) localStorage.setItem(key, JSON.stringify(Object.assign({ uid: fintrackAuthUser.id }, data)));
+        if (data) localStorage.setItem(key, JSON.stringify(Object.assign({ uid: dataOwnerId() }, data)));
         return data || null;
       } catch (e) {
         // offline or table missing: fall back to the last known status so an expired firm cannot work offline
-        try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && c.uid === fintrackAuthUser.id) return c; } catch (e2) {}
+        try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && c.uid === dataOwnerId()) return c; } catch (e2) {}
         return null;
       }
     }
