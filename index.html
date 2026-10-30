@@ -805,6 +805,20 @@
     /* Settings Hub */
     .more-head { margin: 14px 2px 6px; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
     .more-head:first-of-type { margin-top: 4px; }
+    .more-panel { background: #eef1ee; border-radius: 16px; padding: 14px; }
+    .more-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .more-avatar { width: 40px; height: 40px; border-radius: 50%; background: #d3e5dc; color: #1f5f4a; font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .more-name { font-size: 15.5px; font-weight: 800; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .more-role { font-size: 12.5px; color: #6b7280; }
+    .more-close { background: none; border: none; font-size: 28px; line-height: 1; color: #6b7280; cursor: pointer; padding: 0 4px; }
+    .more-panel .more-head { margin: 14px 2px 8px; }
+    .more-panel .more-head:first-of-type { margin-top: 4px; }
+    .more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .more-tile { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; cursor: pointer; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+    .more-tile:active { background: #f6f8f7; }
+    .more-tile span { font-size: 14px; font-weight: 600; color: #1f2937; line-height: 1.25; }
+    .more-ic { width: 22px; height: 22px; color: #1f5f4a; }
+    @media (min-width: 900px) { .more-panel { max-width: 640px; } .more-grid { grid-template-columns: repeat(3, 1fr); } }
     .settings-list { display: flex; flex-direction: column; gap: 6px; }
     .settings-item {
       background: #f8fafc;
@@ -1614,63 +1628,40 @@
 
     <!-- 4. SETTINGS HUB -->
     <div id="settings-section" class="app-screen-section sheet-container" style="display:none;">
-      <h3 style="margin-bottom: 10px; font-size: 14px; font-weight:800;">More</h3>
-
-      <div class="more-head">1. Master</div>
-      <div class="settings-list">
-        <div class="settings-item" onclick="switchSection('acgroups')">
-          <span>🗂️ Account Group</span>
-          <span style="color:#2563eb;">Open →</span>
-        </div>
-        <div class="settings-item" onclick="switchSection('accounts')">
-          <span>📒 Account Master</span>
-          <span style="color:#2563eb;">Open →</span>
-        </div>
-      </div>
-
-      <div class="more-head">2. My Profile</div>
-      <div class="settings-list">
-        <div class="settings-item" onclick="openProfileModal()">
-          <span>👤 My Profile</span>
-          <span style="color:#2563eb;">View →</span>
-        </div>
-      </div>
-
-      <div class="more-head">3. Settings</div>
-      <div class="settings-list">
-        <div class="settings-item" onclick="exportDataBackup()">
-          <span>📤 Backup & Export JSON</span>
-          <span style="color:#2563eb;">Download ↓</span>
+      <div class="more-panel">
+        <div class="more-top">
+          <div class="more-avatar" id="moreAvatar">U</div>
+          <div style="flex:1; min-width:0;">
+            <div class="more-name" id="moreName">-</div>
+            <div class="more-role" id="moreRole">-</div>
+          </div>
+          <button class="more-close" onclick="switchSection('dashboard')" aria-label="Close">×</button>
         </div>
 
-        <div class="settings-item" onclick="document.getElementById('importBackupFile').click()">
-          <span>📥 Restore & Import JSON</span>
-          <span style="color:#10b981;">Upload ↑</span>
+        <div class="more-head">Master</div>
+        <div class="more-grid">
+        <div class="more-tile" onclick="switchSection('acgroups')"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="7" height="5.5" rx="1.2"/><rect x="14" y="10" width="7" height="5" rx="1.2"/><rect x="14" y="17" width="7" height="4" rx="1.2"/><path d="M6.5 9v10.5H14M6.5 12.5H14"/></svg><span>Account Group</span></div>
+        <div class="more-tile" onclick="switchSection('accounts')"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 4 4.5v13c3 0 6 .5 8 2 2-1.5 5-2 8-2v-13c-3 0-6 .5-8 2z"/><path d="M12 6.5v13"/></svg><span>Account Master</span></div>
+        </div>
+
+        <div class="more-head">My Profile</div>
+        <div class="more-grid">
+        <div class="more-tile" onclick="openProfileModal()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.5 20c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg><span>My Profile</span></div>
+        </div>
+
+        <div class="more-head">Settings</div>
+        <div class="more-grid">
+        <div class="more-tile" onclick="exportDataBackup()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></svg><span>Backup & Export JSON</span></div>
+        <div class="more-tile" onclick="document.getElementById('importBackupFile').click()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5V4.5M7.5 9L12 4.5 16.5 9M5 19.5h14"/></svg><span>Restore & Import JSON</span></div>
+        <div class="more-tile" onclick="openAppNameModal()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg><span>Edit App Header Title</span></div>
+        <div class="more-tile" onclick="openChangePasswordModal()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Change Password</span></div>
+        <div class="more-tile" id="installSettingsItem" onclick="installFinTrack()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 8v6M9.5 11.5L12 14l2.5-2.5"/></svg><span>Install App</span></div>
         </div>
         <input type="file" id="importBackupFile" accept=".json" style="display:none;" onchange="importDataBackup(event)">
 
-        <div class="settings-item" onclick="openAppNameModal()">
-          <span>✏️ Edit App Header Title</span>
-          <span style="color:#64748b;">Edit →</span>
-        </div>
-
-        <div class="settings-item" onclick="openChangePasswordModal()">
-          <span>🔒 Change Password</span>
-          <span style="color:#64748b;">Update →</span>
-        </div>
-
-
-        <div class="settings-item" id="installSettingsItem" onclick="installFinTrack()">
-          <span>📲 Install App (Add to Home Screen)</span>
-          <span style="color:#10b981;">Install →</span>
-        </div>
-      </div>
-
-      <div class="more-head">4. Company Profile</div>
-      <div class="settings-list">
-        <div class="settings-item" onclick="openCompanyModal()">
-          <span>🏢 Company Profile</span>
-          <span id="companyProfileHint" style="color:#2563eb;">View →</span>
+        <div class="more-head">Company Profile</div>
+        <div class="more-grid">
+        <div class="more-tile" onclick="openCompanyModal()"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-5h4v5"/></svg><span>Company Profile</span></div>
         </div>
       </div>
 
@@ -3233,6 +3224,7 @@
 
       // Mobile bottom nav active sync
       document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+      if (section === 'settings') renderMoreHeader();
       const navKey = ['acgroups', 'accounts', 'settings'].includes(section) ? 'more' : section;
       const activeBtn = document.getElementById(`botNav-${navKey}`);
       if (activeBtn) activeBtn.classList.add('active');
@@ -3647,6 +3639,14 @@
     // Role comes from Supabase app_metadata, which only the project owner can set (users cannot edit it)
     function isSuperAdmin() {
       return !!(fintrackAuthUser && fintrackAuthUser.app_metadata && fintrackAuthUser.app_metadata.role === 'super_admin');
+    }
+
+    function renderMoreHeader() {
+      const meta = (fintrackAuthUser && fintrackAuthUser.user_metadata) || {};
+      const name = meta.owner_name || meta.name || (currentUser && currentUser.username) || 'User';
+      document.getElementById('moreName').innerText = name;
+      document.getElementById('moreAvatar').innerText = (String(name).trim()[0] || 'U').toUpperCase();
+      document.getElementById('moreRole').innerText = isSuperAdmin() ? 'Admin' : 'Owner';
     }
 
     function openProfileModal() {
