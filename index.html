@@ -2127,4 +2127,2026 @@
       const sessionUser = data?.session?.user;
       if (sessionUser) {
         fintrackAuthUser = sessionUser;
-        currentUser = { username: sessionUser.user_metadata?.user
+        currentUser = { username: sessionUser.user_metadata?.username || sessionUser.email.split('@')[0] };
+        localStorage.setItem('cashbook_active_user', JSON.stringify(currentUser));
+
+        if (isSuperAdmin()) {
+          document.getElementById('register-screen-container').style.display = 'none';
+          document.getElementById('auth-screen-container').style.display = 'none';
+          document.getElementById('main-app-content').style.display = 'none';
+          document.getElementById('tenantLockScreen').style.display = 'none';
+          showAdminApp();
+          return;
+        }
+        document.getElementById('register-screen-container').style.display = 'none';
+        document.getElementById('admin-app').style.display = 'none';
+        if (await showTenantLockIfNeeded()) {
+          document.getElementById('auth-screen-container').style.display = 'none';
+          document.getElementById('main-app-content').style.display = 'none';
+          return;
+        }
+        document.getElementById('tenantLockScreen').style.display = 'none';
+        
+        document.getElementById('auth-screen-container').style.display = 'none';
+        document.getElementById('main-app-content').style.display = 'block';
+        document.getElementById('currentUserNameLabel').innerText = currentUser.username;
+        document.getElementById('heroUserName').innerText = currentUser.username;
+        document.getElementById('appBrandTitle').innerText = appTitle;
+        
+        initUserData();
+        await loadFromSupabase();
+      } else {
+        document.getElementById('admin-app').style.display = 'none';
+        document.getElementById('tenantLockScreen').style.display = 'none';
+        document.getElementById('main-app-content').style.display = 'none';
+        document.getElementById('auth-screen-container').style.display = 'flex';
+      }
+    }
+
+    function initUserData() {
+      const s = localStorage.getItem(getUserStorageKey('sheets'));
+      if (s) { try { sheets = JSON.parse(s); } catch(e){} }
+      const r = localStorage.getItem(getUserStorageKey('receivables'));
+      if (r) { try { receivables = JSON.parse(r); } catch(e){} }
+      const p = localStorage.getItem(getUserStorageKey('payables'));
+      if (p) { try { payables = JSON.parse(p); } catch(e){} }
+      const c = localStorage.getItem(getUserStorageKey('customers'));
+      if (c) { try { customers = JSON.parse(c); } catch(e){} }
+      const g = localStorage.getItem(getUserStorageKey('account_groups'));
+      if (g) { try { accountGroups = JSON.parse(g); } catch(e){} }
+      const am = localStorage.getItem(getUserStorageKey('account_master'));
+      if (am) { try { accountMaster = JSON.parse(am); } catch(e){} }
+      if (!Array.isArray(accountMaster)) accountMaster = [];
+      normalizeAccountGroups();
+      currentSheetIndex = Math.max(0, sheets.length - 1);
+
+      renderDashboard();
+      renderSheet();
+      renderDueTables();
+    }
+
+    function saveAllData() {
+      try {
+        localStorage.setItem(getUserStorageKey('sheets'), JSON.stringify(sheets));
+        localStorage.setItem(getUserStorageKey('receivables'), JSON.stringify(receivables));
+        localStorage.setItem(getUserStorageKey('payables'), JSON.stringify(payables));
+        localStorage.setItem(getUserStorageKey('customers'), JSON.stringify(customers));
+        localStorage.setItem(getUserStorageKey('account_groups'), JSON.stringify(accountGroups));
+        localStorage.setItem(getUserStorageKey('account_master'), JSON.stringify(accountMaster));
+      } catch(e){}
+      renderDashboard();
+      if (isBalPanelVisible) renderBalances();
+      clearTimeout(fintrackSaveTimer);
+      fintrackSaveTimer = setTimeout(() => saveToSupabase(false), 650);
+    }
+
+    /* Live Autocomplete */
+    function getAllRecordedNames() {
+      const names = new Set();
+      sheets.forEach(s => (s.rows || []).forEach(r => { if (r.particular && r.particular.trim()) names.add(r.particular.trim()); }));
+      receivables.forEach(r => { if (r.name && r.name.trim()) names.add(r.name.trim()); });
+      payables.forEach(p => { if (p.name && p.name.trim()) names.add(p.name.trim()); });
+      customers.forEach(c => { if (c.name && c.name.trim()) names.add(c.name.trim()); });
+      return Array.from(names);
+    }
+
+    let activeAutocompleteInput = null;
+
+    function handleLiveSuggestions(inputEl) {
+      activeAutocompleteInput = inputEl;
+      const menu = document.getElementById('liveAutocompleteMenu');
+      const val = (inputEl.value || '').trim().toLowerCase();
+
+      if (!val) {
+        menu.style.display = 'none';
+        return;
+      }
+
+      const allNames = getAllRecordedNames();
+      const matches = allNames.filter(n => n.toLowerCase().startsWith(val));
+
+      if (matches.length === 0) {
+        menu.style.display = 'none';
+        return;
+      }
+
+      menu.innerHTML = '';
+      matches.forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        item.innerText = name;
+        item.onmousedown = function(e) {
+          e.preventDefault();
+          selectAutocompleteItem(name);
+        };
+        menu.appendChild(item);
+      });
+
+      const rect = inputEl.getBoundingClientRect();
+      menu.style.left = `${rect.left + window.scrollX}px`;
+      menu.style.top = `${rect.bottom + window.scrollY + 2}px`;
+      menu.style.width = `${Math.max(rect.width, 130)}px`;
+      menu.style.display = 'block';
+    }
+
+    function selectAutocompleteItem(name) {
+      if (activeAutocompleteInput) {
+        activeAutocompleteInput.value = name;
+        activeAutocompleteInput.dispatchEvent(new Event('change'));
+      }
+      hideAutocompleteMenu();
+    }
+
+    function hideAutocompleteMenu() {
+      const menu = document.getElementById('liveAutocompleteMenu');
+      if (menu) menu.style.display = 'none';
+    }
+
+    document.addEventListener('click', function(e) {
+      if (activeAutocompleteInput && e.target !== activeAutocompleteInput && !e.target.closest('#liveAutocompleteMenu')) {
+        hideAutocompleteMenu();
+      }
+    });
+
+    /* Quick Entry Modal Controller */
+    let currentEntryTarget = 'income';
+    let qeModeValue = 'Cash';
+    function isBankGroup(name) {
+      if (!name) return false;
+      return groupKey(name) === 'bank account' || groupDescendants('BANK ACCOUNT').has(groupKey(name));
+    }
+    function getBankAccounts() { return accountMaster.filter(a => isBankGroup(a.group)); }
+    function getKnownUpiIds() {
+      const set = new Set();
+      accountMaster.forEach(a => { if (a.upi && a.upi.trim()) set.add(a.upi.trim()); });
+      sheets.forEach(sh => (sh.rows || []).forEach(r => { if (r.upiId && r.upiId.trim()) set.add(r.upiId.trim()); }));
+      return Array.from(set);
+    }
+    function populateBankSelect(selected) {
+      const sel = document.getElementById('qeBankAccount');
+      const banks = getBankAccounts();
+      const names = banks.map(a => a.name);
+      if (selected && !names.some(n => groupKey(n) === groupKey(selected))) names.push(selected);
+      sel.innerHTML = '<option value="">-- Select Bank Account --</option>' + names.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+      if (selected) sel.value = selected;
+      else if (names.length === 1) sel.value = names[0];
+      document.getElementById('qeBankHint').style.display = names.length ? 'none' : 'block';
+    }
+    function setQeMode(m) {
+      qeModeValue = ['Cash', 'Bank', 'UPI'].includes(m) ? m : 'Cash';
+      ['Cash', 'Bank', 'UPI'].forEach(x => document.getElementById('qeMode-' + x).classList.toggle('active', x === qeModeValue));
+      document.getElementById('qeBankBox').style.display = qeModeValue === 'Bank' ? 'block' : 'none';
+      document.getElementById('qeUpiBox').style.display = qeModeValue === 'UPI' ? 'block' : 'none';
+      if (qeModeValue === 'Bank') populateBankSelect(document.getElementById('qeBankAccount').value);
+      if (qeModeValue === 'UPI') {
+        document.getElementById('qeUpiList').innerHTML = getKnownUpiIds().map(u => `<option value="${escHtml(u)}"></option>`).join('');
+      }
+    }
+    function modeDetail(r) {
+      if (!r) return '';
+      if (r.mode === 'Bank') return r.bankAccount || '';
+      if (r.mode === 'UPI') return r.upiId || '';
+      return '';
+    }
+
+    function goSheet(step) {
+      const n = currentSheetIndex + step;
+      if (n < 0 || n >= sheets.length) return;
+      currentSheetIndex = n;
+      renderSheet();
+    }
+
+    function openAddForActiveTab() {
+      const vis = ['exp', 'rec', 'pay'].find(t => document.getElementById('txView-' + t).style.display === 'block') || 'inc';
+      openQuickEntryModal({ inc: 'income', exp: 'expense', rec: 'receivable', pay: 'payable' }[vis]);
+    }
+
+    function openEditCashRow(i, kind) {
+      const row = sheets[currentSheetIndex].rows[i];
+      if (!row) return;
+      kind = kind === 'expense' ? 'expense' : 'income';
+      openQuickEntryModal(kind);
+      editingRowIndex = i;
+      document.getElementById('quickEntryModalTitle').innerText = kind === 'income' ? 'Update Income' : 'Update Expense';
+      document.getElementById('qeSaveBtn').innerText = 'Update';
+      document.getElementById('qeDate').value = row.date || today;
+      document.getElementById('qeParticular').value = row.particular || '';
+      document.getElementById('qeIncome').value = kind === 'income' ? (row.income || '') : '';
+      document.getElementById('qeExp').value = kind === 'expense' ? (row.exp || '') : '';
+      document.getElementById('qeUpiId').value = row.upiId || '';
+      if (row.mode === 'Bank') populateBankSelect(row.bankAccount || '');
+      setQeMode(row.mode || 'Cash');
+      if (row.mode === 'Bank') document.getElementById('qeBankAccount').value = row.bankAccount || '';
+    }
+
+    function openQuickEntryModal(target = 'income') {
+      if (target === 'cashbook') target = 'income';
+      currentEntryTarget = target;
+      editingRowIndex = null;
+      document.getElementById('qeSaveBtn').innerText = 'Save Entry';
+      document.getElementById('qeDate').value = today;
+      document.getElementById('qeParticular').value = '';
+
+      if (target === 'income' || target === 'expense') {
+        const isInc = target === 'income';
+        document.getElementById('quickEntryModalTitle').innerText = isInc ? 'Add Income' : 'Add Expense';
+        document.getElementById('qePartLabel').innerText = 'Particular';
+        document.getElementById('qeParticular').placeholder = isInc ? 'e.g. Salary, Interest, Sales' : 'e.g. Rent, Grocery, Fuel';
+        document.getElementById('qeIncWrap').style.display = isInc ? 'block' : 'none';
+        document.getElementById('qeExpWrap').style.display = isInc ? 'none' : 'block';
+        document.getElementById('qeCashbookFields').style.display = 'block';
+        document.getElementById('qeDueFields').style.display = 'none';
+        document.getElementById('qeIncome').value = '';
+        document.getElementById('qeExp').value = '';
+        document.getElementById('qeUpiId').value = '';
+        document.getElementById('qeBankAccount').innerHTML = '';
+        setQeMode('Cash');
+      } else if (target === 'receivable') {
+        document.getElementById('quickEntryModalTitle').innerText = 'Add Due In (Receipt)';
+        document.getElementById('qePartLabel').innerText = 'Debtor / Customer Name';
+        document.getElementById('qeParticular').placeholder = 'e.g. Ramu, Office A';
+        document.getElementById('qeCashbookFields').style.display = 'none';
+        document.getElementById('qeDueFields').style.display = 'block';
+        document.getElementById('qeDesc').value = '';
+        document.getElementById('qeAmount').value = '';
+      } else if (target === 'payable') {
+        document.getElementById('quickEntryModalTitle').innerText = 'Add Due Out (Payment)';
+        document.getElementById('qePartLabel').innerText = 'Creditor / Vendor Name';
+        document.getElementById('qeParticular').placeholder = 'e.g. Vendor B, Supplier';
+        document.getElementById('qeCashbookFields').style.display = 'none';
+        document.getElementById('qeDueFields').style.display = 'block';
+        document.getElementById('qeDesc').value = '';
+        document.getElementById('qeAmount').value = '';
+      }
+
+      document.getElementById('quickEntryModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('qeParticular').focus(), 80);
+    }
+
+    function submitQuickEntry() {
+      const dateVal = document.getElementById('qeDate').value || today;
+      const particularVal = document.getElementById('qeParticular').value.trim();
+
+      if (!particularVal) {
+        return showToast("Please enter particular/party name", "error");
+      }
+
+      if (currentEntryTarget === 'income' || currentEntryTarget === 'expense') {
+        const isInc = currentEntryTarget === 'income';
+        const amtVal = parseFloat(document.getElementById(isInc ? 'qeIncome' : 'qeExp').value) || 0;
+
+        if (amtVal === 0) {
+          return showToast(isInc ? "Please enter Income amount" : "Please enter Expense amount", "error");
+        }
+
+        if (!sheets[currentSheetIndex].rows) sheets[currentSheetIndex].rows = [];
+        const newRow = { date: dateVal, particular: particularVal, mode: qeModeValue, bankAccount: '', upiId: '' };
+        if (isInc) newRow.income = amtVal; else newRow.exp = amtVal;
+        if (qeModeValue === 'Bank') {
+          newRow.bankAccount = document.getElementById('qeBankAccount').value || '';
+        } else if (qeModeValue === 'UPI') {
+          newRow.upiId = document.getElementById('qeUpiId').value.trim();
+          const linked = accountMaster.find(a => a.upi && a.upi.trim().toLowerCase() === newRow.upiId.toLowerCase());
+          if (linked) newRow.bankAccount = linked.name;
+        }
+
+        if (editingRowIndex !== null && sheets[currentSheetIndex].rows[editingRowIndex]) {
+          Object.assign(sheets[currentSheetIndex].rows[editingRowIndex], newRow);
+          editingRowIndex = null;
+          saveAllData();
+          renderSheet();
+          closeModal('quickEntryModal');
+          return showToast("Entry updated successfully!", "success");
+        }
+
+        if (isInc) newRow.exp = 0; else newRow.income = 0;
+        sheets[currentSheetIndex].rows.push(newRow);
+        saveAllData();
+        renderSheet();
+
+        setTimeout(() => {
+          const container = document.getElementById(isInc ? 'incTableContainer' : 'expTableContainer');
+          if (container) container.scrollTop = container.scrollHeight;
+        }, 50);
+
+      } else if (currentEntryTarget === 'receivable') {
+        const amt = parseFloat(document.getElementById('qeAmount').value) || 0;
+        const descVal = document.getElementById('qeDesc').value.trim();
+
+        if (amt === 0) return showToast("Please enter receivable amount", "error");
+
+        receivables.push({ date: dateVal, name: particularVal, desc: descVal, amount: amt });
+        saveAllData();
+        renderDueTables();
+
+      } else if (currentEntryTarget === 'payable') {
+        const amt = parseFloat(document.getElementById('qeAmount').value) || 0;
+        const descVal = document.getElementById('qeDesc').value.trim();
+
+        if (amt === 0) return showToast("Please enter payable amount", "error");
+
+        payables.push({ date: dateVal, name: particularVal, desc: descVal, amount: amt });
+        saveAllData();
+        renderDueTables();
+      }
+
+      closeModal('quickEntryModal');
+      showToast("Entry added successfully!", "success");
+    }
+
+    /* Available Balance Panel */
+    function toggleBalPanel() {
+      const panel = document.getElementById('balSummaryPanel');
+      const btn = document.getElementById('toggleBalBtn');
+      isBalPanelVisible = !isBalPanelVisible;
+
+      if (isBalPanelVisible) {
+        panel.style.display = 'block';
+        btn.innerText = 'Hide Balance';
+        renderBalances();
+      } else {
+        panel.style.display = 'none';
+        btn.innerText = 'Available Balance';
+      }
+    }
+
+    function renderBalances() {
+      const listContainer = document.getElementById('monthBalList');
+      if (!listContainer) return;
+      listContainer.innerHTML = '';
+      let totalAccumulated = 0;
+
+      sheets.forEach((sheet, idx) => {
+        let sheetBal = 0;
+        (sheet.rows || []).forEach(r => {
+          sheetBal += (parseFloat(r.income) || 0) - (parseFloat(r.exp) || 0);
+        });
+
+        totalAccumulated += sheetBal;
+        const displayBal = (sheetBal >= 0 ? '+' : '') + sheetBal;
+
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:7px 10px; background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:11.5px; margin-bottom:4px; cursor:pointer;';
+        item.title = "Click to open this sheet page";
+        item.onclick = () => {
+          currentSheetIndex = idx;
+          renderSheet();
+        };
+        item.innerHTML = `
+          <span><strong>${sheet.name}:</strong></span>
+          <span style="font-weight:700; color:${sheetBal < 0 ? '#dc2626' : '#10b981'};">${displayBal}</span>
+        `;
+        listContainer.appendChild(item);
+      });
+
+      const totalEl = document.getElementById('allMonthsTotalBal');
+      if (totalEl) {
+        totalEl.innerText = (totalAccumulated >= 0 ? '+' : '') + totalAccumulated;
+        totalEl.style.color = totalAccumulated < 0 ? '#dc2626' : '#10b981';
+      }
+    }
+
+    /* Dashboard Calculations & Rendering Recent Transactions */
+    function renderDashboard() {
+      let totalInc = 0, totalExp = 0;
+      const allEntries = [];
+
+      sheets.forEach(s => (s.rows || []).forEach(r => {
+        const inc = parseFloat(r.income) || 0;
+        const exp = parseFloat(r.exp) || 0;
+        totalInc += inc;
+        totalExp += exp;
+        if (inc > 0 || exp > 0) {
+          allEntries.push({
+            date: r.date,
+            title: r.particular || 'Cash Entry',
+            type: inc > 0 ? 'inc' : 'exp',
+            amount: inc > 0 ? inc : exp
+          });
+        }
+      }));
+
+      receivables.forEach(r => {
+        const amt = parseFloat(r.amount) || 0;
+        if (amt > 0) {
+          allEntries.push({ date: r.date, title: r.name || 'Receipt', type: 'inc', amount: amt });
+        }
+      });
+
+      payables.forEach(p => {
+        const amt = parseFloat(p.amount) || 0;
+        if (amt > 0) {
+          allEntries.push({ date: p.date, title: p.name || 'Payment', type: 'exp', amount: amt });
+        }
+      });
+
+      const netCash = totalInc - totalExp;
+      let totalDueIn = receivables.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+      let totalDueOut = payables.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      const projNet = netCash + totalDueIn - totalDueOut;
+
+      document.getElementById('dashNetCash').innerText = `₹${netCash.toLocaleString()}`;
+      document.getElementById('dashTotalIncome').innerText = `₹${totalInc.toLocaleString()}`;
+      document.getElementById('dashTotalExp').innerText = `₹${totalExp.toLocaleString()}`;
+      document.getElementById('dashDueIn').innerText = `₹${totalDueIn.toLocaleString()}`;
+      document.getElementById('dashDueOut').innerText = `₹${totalDueOut.toLocaleString()}`;
+      document.getElementById('dashProjectedNet').innerText = `₹${projNet.toLocaleString()}`;
+      document.getElementById('heroNetBalance').innerText = `₹${netCash.toLocaleString()}`;
+
+      document.getElementById('lowerIncVal').innerText = `₹${totalInc.toLocaleString()}`;
+      document.getElementById('lowerExpVal').innerText = `₹${totalExp.toLocaleString()}`;
+      document.getElementById('donutNetVal').innerText = `₹${netCash.toLocaleString()}`;
+      const maxVal = Math.max(totalInc, totalExp, 1);
+      document.getElementById('incBar').style.width = `${Math.min(100, (totalInc / maxVal) * 100)}%`;
+      document.getElementById('expBar').style.width = `${Math.min(100, (totalExp / maxVal) * 100)}%`;
+
+      const recentListContainer = document.getElementById('recentTransactionsList');
+      recentListContainer.innerHTML = '';
+
+      if (allEntries.length === 0) {
+        recentListContainer.innerHTML = '<div style="font-size:11px; color:#94a3b8; text-align:center; padding:12px 0;">No transactions yet</div>';
+      } else {
+        const lastThree = allEntries.slice(-3).reverse();
+        lastThree.forEach(tx => {
+          const isInc = tx.type === 'inc';
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'recent-tx-item';
+          itemDiv.innerHTML = `
+            <div class="recent-tx-left">
+              <div class="recent-tx-icon ${isInc ? 'tx-inc-bg' : 'tx-exp-bg'}">${isInc ? '↓' : '↑'}</div>
+              <div>
+                <div class="recent-tx-title">${tx.title}</div>
+                <div class="recent-tx-sub">${tx.date || 'Today'}</div>
+              </div>
+            </div>
+            <div class="recent-tx-right">
+              <div class="recent-tx-amt" style="color: ${isInc ? '#059669' : '#dc2626'};">${isInc ? '+' : '-'}₹${tx.amount.toLocaleString()}</div>
+              <div class="recent-tx-dots">⋮</div>
+            </div>
+          `;
+          recentListContainer.appendChild(itemDiv);
+        });
+      }
+    }
+
+    /* Cashbook Sheet Rendering */
+    function renderSheet() {
+      const badge = document.getElementById('badgePageTitle');
+      if (sheets[currentSheetIndex] && badge) badge.innerText = sheets[currentSheetIndex].name;
+
+      const prevBtn = document.getElementById('prevSheetBtn');
+      const nextBtn = document.getElementById('nextSheetBtn');
+      [[prevBtn, currentSheetIndex <= 0], [nextBtn, currentSheetIndex >= sheets.length - 1]].forEach(([b, off]) => {
+        if (!b) return;
+        b.disabled = off;
+        b.style.opacity = off ? '0.4' : '1';
+        b.style.cursor = off ? 'not-allowed' : 'pointer';
+      });
+
+      const incBody = document.getElementById('incTableBody');
+      const expBody = document.getElementById('expTableBody');
+      incBody.innerHTML = '';
+      expBody.innerHTML = '';
+      if (!sheets[currentSheetIndex]) return;
+
+      const modeCell = (row, i) => `<td><select class="mode-select" onchange="changeRowMode(${i}, this.value)">${['Cash','Bank','UPI'].map(m => `<option value="${m}"${(row.mode || 'Cash') === m ? ' selected' : ''}>${m}</option>`).join('')}</select>${modeDetail(row) ? `<div style="font-size:10px; color:#64748b; margin-top:2px; word-break:break-all;">${escHtml(modeDetail(row))}</div>` : ''}</td>`;
+
+      (sheets[currentSheetIndex].rows || []).forEach((row, i) => {
+        const inc = parseFloat(row.income) || 0;
+        const exp = parseFloat(row.exp) || 0;
+        const dateTd = `<td><input type="date" value="${escHtml(row.date)}" onchange="sheets[currentSheetIndex].rows[${i}].date=this.value;saveAllData();"></td>`;
+        const partTd = `<td><input type="text" value="${escHtml(row.particular)}" placeholder="Particular" oninput="handleLiveSuggestions(this)" onblur="setTimeout(hideAutocompleteMenu, 200)" onchange="sheets[currentSheetIndex].rows[${i}].particular=this.value;saveAllData();"></td>`;
+
+        if (inc !== 0) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `${dateTd}${partTd}${modeCell(row, i)}
+            <td><input type="number" inputmode="numeric" class="num" value="${inc}" placeholder="0" oninput="sheets[currentSheetIndex].rows[${i}].income=parseFloat(this.value)||0;saveAllData();calculateCashTotals();"></td>
+            <td style="white-space:nowrap;"><button class="action-btn" title="Edit" onclick="openEditCashRow(${i}, 'income')">✎</button> <button class="action-btn" onclick="deleteCashEntry(${i}, 'income')">✕</button></td>`;
+          incBody.appendChild(tr);
+        }
+        if (exp !== 0) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `${dateTd}${partTd}${modeCell(row, i)}
+            <td><input type="number" inputmode="numeric" class="num exp-num" value="${exp}" placeholder="0" oninput="sheets[currentSheetIndex].rows[${i}].exp=parseFloat(this.value)||0;saveAllData();calculateCashTotals();"></td>
+            <td style="white-space:nowrap;"><button class="action-btn" title="Edit" onclick="openEditCashRow(${i}, 'expense')">✎</button> <button class="action-btn" onclick="deleteCashEntry(${i}, 'expense')">✕</button></td>`;
+          expBody.appendChild(tr);
+        }
+      });
+      calculateCashTotals();
+      if (isBalPanelVisible) renderBalances();
+    }
+
+    // Removes only the Income or Expense part of a row; the row is dropped when nothing is left.
+    function deleteCashEntry(i, kind) {
+      const rows = sheets[currentSheetIndex].rows;
+      const r = rows[i];
+      if (!r) return;
+      if (kind === 'income') r.income = 0; else r.exp = 0;
+      if (!(parseFloat(r.income) || 0) && !(parseFloat(r.exp) || 0)) rows.splice(i, 1);
+      saveAllData();
+      renderSheet();
+    }
+
+    function changeRowMode(i, m) {
+      const r = sheets[currentSheetIndex].rows[i];
+      if (!r) return;
+      r.mode = m;
+      if (m !== 'Bank') r.bankAccount = '';
+      if (m !== 'UPI') r.upiId = '';
+      saveAllData();
+      renderSheet();
+      if (m !== 'Cash') showToast('Tap ✎ to choose the ' + (m === 'Bank' ? 'bank account' : 'UPI ID'), 'success');
+    }
+
+    function calculateCashTotals() {
+      if (!sheets[currentSheetIndex]) return;
+      let inc = 0, exp = 0;
+      (sheets[currentSheetIndex].rows || []).forEach(r => {
+        inc += parseFloat(r.income) || 0;
+        exp += parseFloat(r.exp) || 0;
+      });
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
+      set('totalIncome', inc); set('totalIncome2', inc);
+      set('totalExp', exp); set('totalExp2', exp);
+      set('totalBal', inc - exp);
+    }
+
+    /* Receivables & Payables Table Rendering */
+    function renderDueTables() {
+      const rBody = document.getElementById('recTableBody');
+      rBody.innerHTML = '';
+      receivables.forEach((r, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="date" value="${r.date}" onchange="receivables[${i}].date=this.value;saveAllData();"></td>
+          <td><input type="text" value="${r.name}" placeholder="Party Name" oninput="handleLiveSuggestions(this)" onblur="setTimeout(hideAutocompleteMenu, 200)" onchange="receivables[${i}].name=this.value;saveAllData();"></td>
+          <td><input type="text" value="${r.desc}" placeholder="Desc" onchange="receivables[${i}].desc=this.value;saveAllData();"></td>
+          <td><input type="number" inputmode="numeric" class="num" value="${r.amount === 0 ? '' : r.amount}" placeholder="0" oninput="receivables[${i}].amount=parseFloat(this.value)||0;saveAllData();"></td>
+          <td><button class="action-btn" onclick="receivables.splice(${i},1);saveAllData();renderDueTables();">✕</button></td>
+        `;
+        rBody.appendChild(tr);
+      });
+
+      const pBody = document.getElementById('payTableBody');
+      pBody.innerHTML = '';
+      payables.forEach((p, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="date" value="${p.date}" onchange="payables[${i}].date=this.value;saveAllData();"></td>
+          <td><input type="text" value="${p.name}" placeholder="Party Name" oninput="handleLiveSuggestions(this)" onblur="setTimeout(hideAutocompleteMenu, 200)" onchange="payables[${i}].name=this.value;saveAllData();"></td>
+          <td><input type="text" value="${p.desc}" placeholder="Desc" onchange="payables[${i}].desc=this.value;saveAllData();"></td>
+          <td><input type="number" inputmode="numeric" class="num exp-num" value="${p.amount === 0 ? '' : p.amount}" placeholder="0" oninput="payables[${i}].amount=parseFloat(this.value)||0;saveAllData();"></td>
+          <td><button class="action-btn" onclick="payables.splice(${i},1);saveAllData();renderDueTables();">✕</button></td>
+        `;
+        pBody.appendChild(tr);
+      });
+    }
+
+    /* ===== Customers Module ===== */
+    let editingCustomerIndex = null;
+    function escHtml(v) {
+      return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function custKey(n) { return String(n || '').trim().toLowerCase(); }
+    function fmtINR(n) { return '₹' + (Number(n) || 0).toLocaleString('en-IN'); }
+
+    function getCustomerTotals(name) {
+      const k = custKey(name);
+      let due = 0, received = 0;
+      receivables.forEach(r => { if (custKey(r.name) === k) due += Number(r.amount) || 0; });
+      sheets.forEach(sh => (sh.rows || []).forEach(r => { if (custKey(r.particular) === k) received += Number(r.income) || 0; }));
+      return { due, received };
+    }
+
+    function renderCustomers() {
+      const body = document.getElementById('customerTableBody');
+      if (!body) return;
+      const q = (document.getElementById('customerSearchInput').value || '').trim().toLowerCase();
+      body.innerHTML = '';
+      let totalDue = 0;
+      customers.forEach(c => { totalDue += getCustomerTotals(c.name).due; });
+      document.getElementById('custCountVal').innerText = customers.length;
+      document.getElementById('custTotalDueVal').innerText = fmtINR(totalDue);
+
+      let shown = 0;
+      customers.forEach((c, i) => {
+        if (q && !(String(c.name).toLowerCase().includes(q) || String(c.phone || '').toLowerCase().includes(q) || String(c.email || '').toLowerCase().includes(q))) return;
+        shown++;
+        const t = getCustomerTotals(c.name);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><a style="color:#2563eb; font-weight:700; cursor:pointer;" onclick="openCustomerStatement(${i})">${escHtml(c.name)}</a>${c.email ? `<div style="font-size:10px; color:#94a3b8;">${escHtml(c.email)}</div>` : ''}</td>
+          <td>${c.phone ? `<a href="tel:${escHtml(c.phone)}" style="color:#0f172a; text-decoration:none;">${escHtml(c.phone)}</a>` : '-'}</td>
+          <td class="num exp-num">${fmtINR(t.due)}</td>
+          <td class="num">${fmtINR(t.received)}</td>
+          <td style="white-space:nowrap;">
+            <button class="action-btn" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;" onclick="openCustomerModal(${i})">✎</button>
+            <button class="action-btn" onclick="deleteCustomer(${i})">✕</button>
+          </td>`;
+        body.appendChild(tr);
+      });
+      if (!shown) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="5" style="text-align:center; color:#94a3b8; padding:14px;">${customers.length ? 'No matching customer' : 'No customers yet. Tap "+ Add Customer".'}</td>`;
+        body.appendChild(tr);
+      }
+    }
+
+    function openCustomerModal(i = null) {
+      editingCustomerIndex = (i === null || i === undefined) ? null : i;
+      const c = editingCustomerIndex !== null ? customers[editingCustomerIndex] : null;
+      document.getElementById('customerModalTitle').innerText = c ? 'Edit Customer' : 'Add Customer';
+      document.getElementById('custName').value = c ? c.name : '';
+      document.getElementById('custPhone').value = c ? (c.phone || '') : '';
+      document.getElementById('custAddress').value = c ? (c.address || '') : '';
+      document.getElementById('custEmail').value = c ? (c.email || '') : '';
+      document.getElementById('custNotes').value = c ? (c.notes || '') : '';
+      document.getElementById('customerModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('custName').focus(), 80);
+    }
+
+    function saveCustomer() {
+      const name = document.getElementById('custName').value.trim();
+      if (!name) return showToast("Please enter customer name", "error");
+      const dup = customers.findIndex((c, idx) => custKey(c.name) === custKey(name) && idx !== editingCustomerIndex);
+      if (dup !== -1) return showToast("Customer already exists", "error");
+      const data = {
+        name,
+        phone: document.getElementById('custPhone').value.trim(),
+        email: document.getElementById('custEmail').value.trim(),
+        address: document.getElementById('custAddress').value.trim(),
+        notes: document.getElementById('custNotes').value.trim()
+      };
+      if (editingCustomerIndex !== null && customers[editingCustomerIndex]) {
+        const oldName = customers[editingCustomerIndex].name;
+        customers[editingCustomerIndex] = Object.assign({}, customers[editingCustomerIndex], data);
+        // keep existing entries linked if the name was changed
+        if (custKey(oldName) !== custKey(name)) {
+          const k = custKey(oldName);
+          receivables.forEach(r => { if (custKey(r.name) === k) r.name = name; });
+          sheets.forEach(sh => (sh.rows || []).forEach(r => { if (custKey(r.particular) === k) r.particular = name; }));
+          renderDueTables(); renderSheet();
+        }
+      } else {
+        customers.push(data);
+      }
+      editingCustomerIndex = null;
+      saveAllData();
+      renderCustomers();
+      closeModal('customerModal');
+      showToast("Customer saved!", "success");
+    }
+
+    function deleteCustomer(i) {
+      const c = customers[i];
+      if (!c) return;
+      if (!confirm(`Delete customer "${c.name}"? Their cashbook and due entries will stay.`)) return;
+      customers.splice(i, 1);
+      saveAllData();
+      renderCustomers();
+    }
+
+    function openCustomerStatement(i) {
+      const c = customers[i];
+      if (!c) return;
+      const k = custKey(c.name);
+      const items = [];
+      sheets.forEach(sh => (sh.rows || []).forEach(r => {
+        if (custKey(r.particular) !== k) return;
+        if (Number(r.income)) items.push({ date: r.date, type: 'Received', det: sh.name || '', amt: Number(r.income), cls: '' });
+        if (Number(r.exp)) items.push({ date: r.date, type: 'Paid', det: sh.name || '', amt: Number(r.exp), cls: 'exp-num' });
+      }));
+      receivables.forEach(r => {
+        if (custKey(r.name) === k) items.push({ date: r.date, type: 'Due In', det: r.desc || '', amt: Number(r.amount) || 0, cls: 'exp-num' });
+      });
+      items.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      document.getElementById('custStmtTitle').innerText = c.name;
+      document.getElementById('custStmtInfo').innerText = [c.phone, c.email, c.address, c.notes].filter(Boolean).join(' • ');
+      const body = document.getElementById('custStmtBody');
+      body.innerHTML = items.length ? items.map(it => `<tr><td>${escHtml(it.date)}</td><td>${it.type}</td><td>${escHtml(it.det)}</td><td class="num ${it.cls}">${fmtINR(it.amt)}</td></tr>`).join('')
+        : '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">No transactions for this customer</td></tr>';
+      const t = getCustomerTotals(c.name);
+      document.getElementById('custStmtTotals').innerHTML = `<span style="color:#dc2626;">Due In: ${fmtINR(t.due)}</span><span style="color:#059669;">Received: ${fmtINR(t.received)}</span>`;
+      document.getElementById('customerStatementModal').style.display = 'flex';
+    }
+
+    /* ===== Account Groups Module ===== */
+    let editingGroupIndex = null;
+
+    function defaultAccountGroups() {
+      return [
+        ['PRIMARY', '', ''],
+        ['ASSETS', 'Asset', ''],
+        ['LIABILITIES', 'Liability', ''],
+        ['INCOME', 'Income', ''],
+        ['EXPENSE', 'Expense', ''],
+        ['BANK ACCOUNT', 'Asset', 'ASSETS']
+      ].map(([name, nature, parent]) => ({ name, nature, parent, system: true }));
+    }
+
+    // Built-in groups are always the standard set; groups the user added are kept.
+    function normalizeAccountGroups() {
+      const custom = (Array.isArray(accountGroups) ? accountGroups : []).filter(g => g && !g.system);
+      accountGroups = defaultAccountGroups().concat(custom);
+    }
+
+    function groupKey(n) { return String(n || '').trim().toLowerCase(); }
+
+    function groupDescendants(name) {
+      const out = new Set();
+      const walk = (n) => accountGroups.forEach(g => {
+        if (groupKey(g.parent) === groupKey(n) && !out.has(groupKey(g.name))) { out.add(groupKey(g.name)); walk(g.name); }
+      });
+      walk(name);
+      return out;
+    }
+
+    function renderAccountGroups() {
+      const body = document.getElementById('groupTableBody');
+      if (!body) return;
+      const q = (document.getElementById('groupSearchInput').value || '').trim().toLowerCase();
+      document.getElementById('grpCountVal').innerText = accountGroups.length;
+      document.getElementById('grpCustomCountVal').innerText = accountGroups.filter(g => !g.system).length;
+
+      // order as a tree: top-level groups first, children indented below their parent
+      const names = new Set(accountGroups.map(g => groupKey(g.name)));
+      const ordered = [];
+      const seen = new Set();
+      const add = (g, depth) => {
+        const idx = accountGroups.indexOf(g);
+        if (seen.has(idx)) return;
+        seen.add(idx);
+        ordered.push({ g, idx, depth });
+        accountGroups.forEach(c => { if (groupKey(c.parent) === groupKey(g.name)) add(c, depth + 1); });
+      };
+      accountGroups.forEach(g => { if (!g.parent || !names.has(groupKey(g.parent))) add(g, 0); });
+      accountGroups.forEach(g => add(g, 0));
+
+      body.innerHTML = '';
+      let shown = 0;
+      ordered.forEach(({ g, idx, depth }) => {
+        if (q && !String(g.name).toLowerCase().includes(q)) return;
+        shown++;
+        const natColor = { Asset: '#2563eb', Liability: '#d97706', Income: '#059669', Expense: '#dc2626' }[g.nature] || '#475569';
+        const tr = document.createElement('tr');
+        const isPrimary = groupKey(g.name) === 'primary';
+        tr.innerHTML = `
+          <td style="padding-left:${8 + (q ? 0 : depth * 16)}px; font-weight:${depth ? 600 : 800};">${depth && !q ? '↳ ' : ''}${escHtml(g.name)}</td>
+          <td>${isPrimary ? '<span style="color:#94a3b8;">PRIMARY</span>' : (g.parent ? escHtml(g.parent) : '<span style="color:#94a3b8;">PRIMARY</span>')}</td>
+          <td style="color:${natColor}; font-weight:700;">${g.nature ? escHtml(g.nature) : '-'}</td>
+          <td>${g.system ? '<span style="font-size:10px; font-weight:800; color:#64748b; background:#f1f5f9; border-radius:6px; padding:2px 6px;">Built-in</span>' : '<span style="font-size:10px; font-weight:800; color:#059669; background:#ecfdf5; border-radius:6px; padding:2px 6px;">Custom</span>'}</td>
+          <td class="num">${(() => { const n = countAccountsInGroup(g.name); return n ? `<a style="color:#2563eb; font-weight:800; cursor:pointer;" onclick="viewGroupAccounts(${idx})">${n}</a>` : '<span style="color:#94a3b8;">0</span>'; })()}</td>
+          <td style="white-space:nowrap;">${g.system ? '' : `<button class="action-btn" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;" onclick="openGroupModal(${idx})">✎</button>
+               <button class="action-btn" onclick="deleteAccountGroup(${idx})">✕</button>`}</td>`;
+        body.appendChild(tr);
+      });
+      if (!shown) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="6" style="text-align:center; color:#94a3b8; padding:14px;">No matching group</td>';
+        body.appendChild(tr);
+      }
+    }
+
+    function fillGroupParentOptions(selectedParent, excludeName) {
+      const sel = document.getElementById('grpParent');
+      const blocked = excludeName ? groupDescendants(excludeName) : new Set();
+      if (excludeName) blocked.add(groupKey(excludeName));
+      let html = '<option value="">PRIMARY</option>';
+      accountGroups.forEach(g => {
+        if (blocked.has(groupKey(g.name)) || groupKey(g.name) === 'primary') return;
+        html += `<option value="${escHtml(g.name)}">${escHtml(g.name)}</option>`;
+      });
+      sel.innerHTML = html;
+      sel.value = selectedParent || '';
+    }
+
+    function onGroupParentChange() {
+      const parent = accountGroups.find(g => groupKey(g.name) === groupKey(document.getElementById('grpParent').value));
+      if (parent) document.getElementById('grpNature').value = parent.nature;
+    }
+
+    function openGroupModal(i = null) {
+      editingGroupIndex = (i === null || i === undefined) ? null : i;
+      const g = editingGroupIndex !== null ? accountGroups[editingGroupIndex] : null;
+      document.getElementById('groupModalTitle').innerText = g ? 'Edit Account Group' : 'Add Account Group';
+      document.getElementById('grpName').value = g ? g.name : '';
+      fillGroupParentOptions(g ? g.parent : '', g ? g.name : '');
+      document.getElementById('grpNature').value = g ? g.nature : 'Asset';
+      document.getElementById('groupModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('grpName').focus(), 80);
+    }
+
+    function saveAccountGroup() {
+      const name = document.getElementById('grpName').value.trim();
+      const parent = document.getElementById('grpParent').value;
+      const nature = document.getElementById('grpNature').value;
+      if (!name) return showToast("Please enter group name", "error");
+      const dup = accountGroups.findIndex((g, idx) => groupKey(g.name) === groupKey(name) && idx !== editingGroupIndex);
+      if (dup !== -1) return showToast("Group already exists", "error");
+
+      if (editingGroupIndex !== null && accountGroups[editingGroupIndex]) {
+        const old = accountGroups[editingGroupIndex];
+        const oldName = old.name;
+        accountGroups[editingGroupIndex] = Object.assign({}, old, { name, parent, nature });
+        if (groupKey(oldName) !== groupKey(name)) {
+          accountGroups.forEach(g => { if (groupKey(g.parent) === groupKey(oldName)) g.parent = name; });
+          accountMaster.forEach(a => { if (groupKey(a.group) === groupKey(oldName)) a.group = name; });
+        }
+      } else {
+        accountGroups.push({ name, nature, parent, system: false });
+      }
+      editingGroupIndex = null;
+      saveAllData();
+      renderAccountGroups();
+      closeModal('groupModal');
+      showToast("Account group saved!", "success");
+    }
+
+    function deleteAccountGroup(i) {
+      const g = accountGroups[i];
+      if (!g || g.system) return;
+      if (accountGroups.some(c => groupKey(c.parent) === groupKey(g.name))) {
+        return showToast("This group has sub-groups. Delete or move them first.", "error");
+      }
+      if (countAccountsInGroup(g.name)) {
+        return showToast("This group has accounts in Account Master. Move or delete them first.", "error");
+      }
+      if (!confirm(`Delete account group "${g.name}"?`)) return;
+      accountGroups.splice(i, 1);
+      saveAllData();
+      renderAccountGroups();
+    }
+
+    /* ===== Account Master Module (child of Account Groups) ===== */
+    let editingAccountIndex = null;
+    let pendingAccountGroupFilter = '';
+
+    function findGroup(name) { return accountGroups.find(g => groupKey(g.name) === groupKey(name)); }
+    function countAccountsInGroup(name) { return accountMaster.filter(a => groupKey(a.group) === groupKey(name)).length; }
+
+    function viewGroupAccounts(idx) {
+      const g = accountGroups[idx];
+      if (!g) return;
+      pendingAccountGroupFilter = g.name;
+      switchSection('accounts');
+    }
+
+    function renderAccountMaster() {
+      const body = document.getElementById('accountTableBody');
+      if (!body) return;
+      const filterSel = document.getElementById('accountGroupFilter');
+      let current = pendingAccountGroupFilter || filterSel.value || '';
+      pendingAccountGroupFilter = '';
+      filterSel.innerHTML = '<option value="">All Groups</option>' + accountGroups
+        .filter(g => groupKey(g.name) !== 'primary')
+        .map(g => `<option value="${escHtml(g.name)}">${escHtml(g.name)}</option>`).join('');
+      filterSel.value = current;
+      if (filterSel.value !== current) { filterSel.value = ''; current = ''; }
+
+      const q = (document.getElementById('accountSearchInput').value || '').trim().toLowerCase();
+      document.getElementById('accCountVal').innerText = accountMaster.length;
+      body.innerHTML = '';
+      let shown = 0;
+      accountMaster.forEach((a, i) => {
+        if (q && !String(a.name).toLowerCase().includes(q)) return;
+        if (current && groupKey(a.group) !== groupKey(current)) return;
+        shown++;
+        const grp = findGroup(a.group);
+        const nature = grp ? grp.nature : '';
+        const natColor = { Asset: '#2563eb', Liability: '#d97706', Income: '#059669', Expense: '#dc2626' }[nature] || '#475569';
+        const op = Number(a.opening) || 0;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-weight:700;">${escHtml(a.name)}${a.upi ? `<div style="font-size:10px; font-weight:600; color:#64748b;">UPI: ${escHtml(a.upi)}</div>` : ''}</td>
+          <td>${escHtml(a.group)}${grp && grp.parent ? `<div style="font-size:10px; color:#94a3b8;">under ${escHtml(grp.parent)}</div>` : ''}</td>
+          <td style="color:${natColor}; font-weight:700;">${nature ? escHtml(nature) : '-'}</td>
+          <td class="num">${op ? fmtINR(op) + ' ' + escHtml(a.drcr || 'Dr') : '-'}</td>
+          <td style="white-space:nowrap;">
+            <button class="action-btn" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;" onclick="openAccountModal(${i})">✎</button>
+            <button class="action-btn" onclick="deleteAccount(${i})">✕</button>
+          </td>`;
+        body.appendChild(tr);
+      });
+      document.getElementById('accShownVal').innerText = shown;
+      if (!shown) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="5" style="text-align:center; color:#94a3b8; padding:14px;">${accountMaster.length ? 'No matching account' : 'No accounts yet. Tap "+ Add Account".'}</td>`;
+        body.appendChild(tr);
+      }
+    }
+
+    function onAccountGroupChange() {
+      const g = findGroup(document.getElementById('accGroup').value);
+      document.getElementById('accNature').value = g ? g.nature : '';
+      document.getElementById('accUpiBox').style.display = isBankGroup(document.getElementById('accGroup').value) ? 'block' : 'none';
+      if (g) document.getElementById('accDrCr').value = (g.nature === 'Asset' || g.nature === 'Expense') ? 'Dr' : 'Cr';
+    }
+
+    function openAccountModal(i = null) {
+      editingAccountIndex = (i === null || i === undefined) ? null : i;
+      const a = editingAccountIndex !== null ? accountMaster[editingAccountIndex] : null;
+      document.getElementById('accountModalTitle').innerText = a ? 'Edit Account' : 'Add Account';
+      const sel = document.getElementById('accGroup');
+      sel.innerHTML = '<option value="">-- Select Group --</option>' + accountGroups
+        .filter(g => groupKey(g.name) !== 'primary')
+        .map(g => `<option value="${escHtml(g.name)}">${escHtml(g.name)}${g.parent ? ' (under ' + escHtml(g.parent) + ')' : ''}</option>`).join('');
+      const pre = a ? a.group : (document.getElementById('accountGroupFilter').value || '');
+      sel.value = pre;
+      document.getElementById('accName').value = a ? a.name : '';
+      document.getElementById('accOpening').value = a && a.opening ? a.opening : '';
+      document.getElementById('accUpi').value = a && a.upi ? a.upi : '';
+      onAccountGroupChange();
+      if (a) document.getElementById('accDrCr').value = a.drcr || 'Dr';
+      document.getElementById('accountModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('accName').focus(), 80);
+    }
+
+    function saveAccount() {
+      const group = document.getElementById('accGroup').value;
+      const name = document.getElementById('accName').value.trim();
+      if (!group) return showToast("Please select account group", "error");
+      if (!name) return showToast("Please enter account name", "error");
+      const dup = accountMaster.findIndex((a, idx) => groupKey(a.name) === groupKey(name) && idx !== editingAccountIndex);
+      if (dup !== -1) return showToast("Account already exists", "error");
+      const data = {
+        name,
+        group,
+        opening: parseFloat(document.getElementById('accOpening').value) || 0,
+        drcr: document.getElementById('accDrCr').value,
+        upi: isBankGroup(group) ? document.getElementById('accUpi').value.trim() : ''
+      };
+      if (editingAccountIndex !== null && accountMaster[editingAccountIndex]) {
+        const oldAcc = accountMaster[editingAccountIndex].name;
+        accountMaster[editingAccountIndex] = Object.assign({}, accountMaster[editingAccountIndex], data);
+        if (groupKey(oldAcc) !== groupKey(name)) {
+          sheets.forEach(sh => (sh.rows || []).forEach(r => { if (r.bankAccount && groupKey(r.bankAccount) === groupKey(oldAcc)) r.bankAccount = name; }));
+          renderSheet();
+        }
+      } else {
+        accountMaster.push(data);
+      }
+      editingAccountIndex = null;
+      saveAllData();
+      renderAccountMaster();
+      renderAccountGroups();
+      closeModal('accountModal');
+      showToast("Account saved!", "success");
+    }
+
+    function deleteAccount(i) {
+      const a = accountMaster[i];
+      if (!a) return;
+      if (!confirm(`Delete account "${a.name}"?`)) return;
+      accountMaster.splice(i, 1);
+      saveAllData();
+      renderAccountMaster();
+      renderAccountGroups();
+    }
+
+    /* Navigation Controller */
+    let navigationHistory = ['dashboard'];
+
+    function switchSection(section, fromHistory = false) {
+      const curSection = navigationHistory[navigationHistory.length - 1] || 'dashboard';
+
+      const sections = {
+        'dashboard': document.getElementById('dashboard-section'),
+        'transaction': document.getElementById('transaction-section'),
+        'customers': document.getElementById('customers-section'),
+        'acgroups': document.getElementById('acgroups-section'),
+        'accounts': document.getElementById('accounts-section'),
+        'reports': document.getElementById('ledger-section'),
+        'settings': document.getElementById('settings-section')
+      };
+
+      Object.keys(sections).forEach(key => {
+        const el = sections[key];
+        if (key === section) {
+          el.style.display = 'block';
+        } else {
+          el.style.display = 'none';
+        }
+      });
+
+      // Mobile bottom nav active sync
+      document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+      const navKey = ['acgroups', 'accounts', 'settings'].includes(section) ? 'more' : section;
+      const activeBtn = document.getElementById(`botNav-${navKey}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      if (section === 'dashboard') {
+        navigationHistory = ['dashboard'];
+      } else {
+        if (!fromHistory && curSection !== section) {
+          navigationHistory.push(section);
+        }
+      }
+
+      if (section === 'dashboard') renderDashboard();
+      if (section === 'customers') renderCustomers();
+      if (section === 'acgroups') renderAccountGroups();
+      if (section === 'accounts') renderAccountMaster();
+      if (section === 'reports') { populateLedgerAccounts(); renderActiveReport(); }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function switchTxTab(subTab) {
+      ['inc', 'exp', 'rec', 'pay'].forEach(t => {
+        document.getElementById('txView-' + t).style.display = subTab === t ? 'block' : 'none';
+        document.getElementById('txTabBtn-' + t).className = subTab === t ? 'sub-nav-tabs-btn active' : 'sub-nav-tabs-btn';
+      });
+      const cashTab = subTab === 'inc' || subTab === 'exp';
+      document.getElementById('txCashBar').style.display = 'block';
+
+      // Keep desktop top-nav buttons synchronized with transaction sub-tabs
+      document.querySelectorAll('.desktop-nav-btn').forEach(b => b.classList.remove('active'));
+      const deskBtn = document.getElementById(`deskNav-transaction-${subTab}`);
+      if (deskBtn) deskBtn.classList.add('active');
+    }
+
+    const originalSwitchSection = switchSection;
+    switchSection = function(section, fromHistory = false) {
+      originalSwitchSection(section, fromHistory);
+      
+      // Sync desktop top navigation buttons active state
+      document.querySelectorAll('.desktop-nav-btn').forEach(b => b.classList.remove('active'));
+      let activeBtnId = '';
+      if (section === 'transaction') {
+        // Find which sub-tab is currently visible
+        const vis = ['exp', 'rec', 'pay'].find(t => document.getElementById('txView-' + t).style.display === 'block') || 'inc';
+        activeBtnId = 'deskNav-transaction-' + vis;
+      } else {
+        activeBtnId = 'deskNav-' + section;
+      }
+      const targetDeskBtn = document.getElementById(activeBtnId);
+      if (targetDeskBtn) targetDeskBtn.classList.add('active');
+    };
+
+    /* Reports & Statement Core Logic */
+    function populateLedgerAccounts() {
+      const sel = document.getElementById('ledgerAccountSelect');
+      sel.innerHTML = '<option value="ALL">-- All Recorded Parties --</option>';
+      const names = getAllRecordedNames();
+      names.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.innerText = n;
+        sel.appendChild(opt);
+      });
+    }
+
+    /* Report date filter helpers */
+    function getReportRange() {
+      return {
+        from: (document.getElementById('reportFromDate') || {}).value || '',
+        to: (document.getElementById('reportToDate') || {}).value || ''
+      };
+    }
+    // useFrom=false -> "as on To date" (cumulative), used by Trial Balance / Balance Sheet
+    function inReportRange(d, useFrom = true) {
+      const { from, to } = getReportRange();
+      if (!from && !to) return true;
+      if (!d) return false;
+      if (useFrom && from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    }
+    function setReportRange(preset) {
+      const pad = n => String(n).padStart(2, '0');
+      const f = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const t = new Date();
+      let from = '', to = '';
+      if (preset === 'today') { from = to = f(t); }
+      else if (preset === 'week') { const s = new Date(t); s.setDate(t.getDate() - ((t.getDay() + 6) % 7)); from = f(s); to = f(t); }
+      else if (preset === 'month') { from = f(new Date(t.getFullYear(), t.getMonth(), 1)); to = f(new Date(t.getFullYear(), t.getMonth() + 1, 0)); }
+      else if (preset === 'lastmonth') { from = f(new Date(t.getFullYear(), t.getMonth() - 1, 1)); to = f(new Date(t.getFullYear(), t.getMonth(), 0)); }
+      else if (preset === 'fy') { const y = t.getMonth() >= 3 ? t.getFullYear() : t.getFullYear() - 1; from = `${y}-04-01`; to = `${y + 1}-03-31`; }
+      else if (preset === 'year') { from = `${t.getFullYear()}-01-01`; to = `${t.getFullYear()}-12-31`; }
+      document.getElementById('reportFromDate').value = from;
+      document.getElementById('reportToDate').value = to;
+      renderActiveReport();
+    }
+    function updatePeriodLabel(type) {
+      const el = document.getElementById('reportPeriodLabel');
+      if (!el) return;
+      const { from, to } = getReportRange();
+      const dmy = d => d ? d.split('-').reverse().join('-') : '';
+      if (!from && !to) { el.innerText = 'Showing: All dates'; return; }
+      const asOn = ['trialbalance', 'balancesheet'].includes(type);
+      el.innerText = asOn
+        ? `As on ${to ? dmy(to) : 'latest'} (all entries up to this date)`
+        : `Period: ${from ? dmy(from) : 'start'} to ${to ? dmy(to) : 'latest'}`;
+    }
+
+    function handleReportTypeChange() {
+      const type = document.getElementById('reportTypeSelect').value;
+      document.getElementById('accountFilterGroup').style.display = type === 'ledger' ? 'flex' : 'none';
+      document.getElementById('searchFilterGroup').style.display = type === 'ledger' ? 'flex' : 'none';
+      renderActiveReport();
+    }
+
+    function renderActiveReport() {
+      const type = document.getElementById('reportTypeSelect').value;
+      const isFinal = ['receiptpayment','trialbalance','profitloss','balancesheet'].includes(type);
+      updatePeriodLabel(type);
+      document.querySelector('#ledger-section .table-scroll').style.display = isFinal ? 'none' : '';
+      document.getElementById('finalReportBox').style.display = isFinal ? 'block' : 'none';
+      if (isFinal) { renderFinalReport(type); return; }
+      const account = document.getElementById('ledgerAccountSelect').value;
+      const search = document.getElementById('reportSearchInput').value.toLowerCase();
+      const thead = document.getElementById('reportTableHead');
+      const tbody = document.getElementById('ledgerDetailBody');
+      tbody.innerHTML = '';
+
+      const entries = [];
+      sheets.forEach(s => (s.rows || []).forEach(r => {
+        if (r.date && inReportRange(r.date)) {
+          entries.push({
+            date: r.date,
+            source: `Cashbook (${s.name}) · ${r.mode || 'Cash'}${modeDetail(r) ? ' - ' + modeDetail(r) : ''}`,
+            particular: r.particular || '-',
+            inc: parseFloat(r.income) || 0,
+            exp: parseFloat(r.exp) || 0
+          });
+        }
+      }));
+      receivables.forEach(r => {
+        if (r.date && inReportRange(r.date)) {
+          entries.push({
+            date: r.date,
+            source: 'Receipt (Due In)',
+            particular: r.name || '-',
+            inc: parseFloat(r.amount) || 0,
+            exp: 0
+          });
+        }
+      });
+      payables.forEach(p => {
+        if (p.date && inReportRange(p.date)) {
+          entries.push({
+            date: p.date,
+            source: 'Payment (Due Out)',
+            particular: p.name || '-',
+            inc: 0,
+            exp: parseFloat(p.amount) || 0
+          });
+        }
+      });
+
+      let totalIn = 0, totalOut = 0;
+
+      if (type === 'ledger') {
+        thead.innerHTML = `
+          <tr>
+            <th style="width:20%;">Date</th>
+            <th style="width:22%;">Source</th>
+            <th style="width:26%;">Particular</th>
+            <th style="width:16%;" class="num">Income / In</th>
+            <th style="width:16%;" class="num exp-num">Exp / Out</th>
+          </tr>
+        `;
+
+        let filtered = entries;
+        if (account !== 'ALL') {
+          filtered = filtered.filter(e => (e.particular || '').toLowerCase() === account.toLowerCase());
+        }
+        if (search) {
+          filtered = filtered.filter(e => (e.particular || '').toLowerCase().includes(search));
+        }
+
+        filtered.forEach(e => {
+          totalIn += e.inc;
+          totalOut += e.exp;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${e.date}</td>
+            <td>${e.source}</td>
+            <td>${e.particular}</td>
+            <td class="num">${e.inc.toLocaleString()}</td>
+            <td class="num exp-num">${e.exp.toLocaleString()}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById('reportFootLabel').colSpan = 3;
+        document.getElementById('reportFootLabel').innerText = "Total";
+        document.getElementById('ledgerFilterIn').style.display = "";
+        document.getElementById('ledgerFilterOut').style.display = "";
+        document.getElementById('ledgerFilterIn').innerText = totalIn.toLocaleString();
+        document.getElementById('ledgerFilterOut').innerText = totalOut.toLocaleString();
+        document.getElementById('ledgerFilterBalance').innerText = `Net: ₹${(totalIn - totalOut).toLocaleString()}`;
+
+      } else {
+        const grouping = {};
+
+        entries.forEach(e => {
+          let key = '';
+          const [yr, mo, dy] = e.date.split('-');
+          if (type === 'daywise') {
+            key = e.date;
+          } else if (type === 'monthwise') {
+            key = `${yr}-${mo}`;
+          } else if (type === 'yearwise') {
+            key = yr || 'Unknown';
+          }
+
+          if (!grouping[key]) {
+            grouping[key] = { inc: 0, exp: 0, count: 0 };
+          }
+          grouping[key].inc += e.inc;
+          grouping[key].exp += e.exp;
+          grouping[key].count += 1;
+        });
+
+        const labelTitle = type === 'daywise' ? 'Date (Day)' : type === 'monthwise' ? 'Year - Month' : 'Year';
+
+        thead.innerHTML = `
+          <tr>
+            <th style="width:34%;">${labelTitle}</th>
+            <th style="width:22%;" class="num">Total Income / In</th>
+            <th style="width:22%;" class="num exp-num">Total Exp / Out</th>
+            <th style="width:22%;" class="num">Net Balance</th>
+          </tr>
+        `;
+
+        const sortedKeys = Object.keys(grouping).sort().reverse();
+
+        sortedKeys.forEach(k => {
+          const item = grouping[k];
+          const net = item.inc - item.exp;
+          totalIn += item.inc;
+          totalOut += item.exp;
+
+          let displayKey = k;
+          if (type === 'monthwise' && k.includes('-')) {
+            const [y, m] = k.split('-');
+            const dateObj = new Date(parseInt(y), parseInt(m) - 1, 1);
+            displayKey = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+          }
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${displayKey}</strong> <span style="font-size:10px; color:#64748b;">(${item.count} items)</span></td>
+            <td class="num">${item.inc.toLocaleString()}</td>
+            <td class="num exp-num">${item.exp.toLocaleString()}</td>
+            <td class="num" style="font-weight:700; color:${net >= 0 ? '#10b981' : '#dc2626'};">${net >= 0 ? '+' : ''}${net.toLocaleString()}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById('reportFootLabel').colSpan = 1;
+        document.getElementById('reportFootLabel').innerText = "Grand Total";
+        document.getElementById('ledgerFilterIn').style.display = "";
+        document.getElementById('ledgerFilterOut').style.display = "";
+        document.getElementById('ledgerFilterIn').innerText = totalIn.toLocaleString();
+        document.getElementById('ledgerFilterOut').innerText = totalOut.toLocaleString();
+        document.getElementById('ledgerFilterBalance').innerText = `₹${(totalIn - totalOut).toLocaleString()}`;
+      }
+    }
+
+    /* Final Accounts: Receipt & Payment, Trial Balance, P&L, Balance Sheet */
+    function renderFinalReport(type) {
+      const fmt = n => (Math.round(n * 100) / 100).toLocaleString();
+      const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      const addTo = (m, k, v) => { const key = (k || 'Unnamed').trim() || 'Unnamed'; m[key] = (m[key] || 0) + v; };
+      const cashInc = {}, cashExp = {}, recv = {}, payb = {};
+      // Trial Balance & Balance Sheet = "as on To date"; others = From-To period
+      const asOn = (type === 'trialbalance' || type === 'balancesheet');
+      const inPeriod = d => inReportRange(d, !asOn);
+      const { from: fromDate } = getReportRange();
+      let openBal = 0; // cash balance brought forward before From date (Receipt & Payment)
+      sheets.forEach(sh => (sh.rows || []).forEach(r => {
+        const i = parseFloat(r.income) || 0, e = parseFloat(r.exp) || 0;
+        if (!inPeriod(r.date)) {
+          if (type === 'receiptpayment' && fromDate && r.date && r.date < fromDate) openBal += i - e;
+          return;
+        }
+        if (i) addTo(cashInc, r.particular, i);
+        if (e) addTo(cashExp, r.particular, e);
+      }));
+      receivables.forEach(r => { if (!inPeriod(r.date)) return; const a = parseFloat(r.amount) || 0; if (a) addTo(recv, r.name, a); });
+      payables.forEach(p => { if (!inPeriod(p.date)) return; const a = parseFloat(p.amount) || 0; if (a) addTo(payb, p.name, a); });
+      const sum = o => Object.values(o).reduce((a, b) => a + b, 0);
+      const tCashInc = sum(cashInc), tCashExp = sum(cashExp), tRecv = sum(recv), tPay = sum(payb);
+      const cash = tCashInc - tCashExp;
+      const income = tCashInc + tRecv, expense = tCashExp + tPay;
+      const profit = income - expense;
+      const rows = o => Object.keys(o).sort().map(k => [k, o[k]]);
+
+      // two-sided (T-format) table builder
+      const twoSide = (title, lh, rh, L, R) => {
+        const tl = L.reduce((a, x) => a + x[1], 0), tr = R.reduce((a, x) => a + x[1], 0);
+        const n = Math.max(L.length, R.length);
+        let h = `<h4 style="margin:6px 0; font-size:13px;">${title}</h4><div class="table-scroll"><table><thead><tr><th style="width:30%;">${lh}</th><th class="num" style="width:20%;">₹</th><th style="width:30%;">${rh}</th><th class="num" style="width:20%;">₹</th></tr></thead><tbody>`;
+        for (let i = 0; i < n; i++) {
+          const l = L[i], r = R[i];
+          h += `<tr><td>${l ? esc(l[0]) : ''}</td><td class="num">${l ? fmt(l[1]) : ''}</td><td>${r ? esc(r[0]) : ''}</td><td class="num">${r ? fmt(r[1]) : ''}</td></tr>`;
+        }
+        h += `</tbody><tfoot><tr class="total-row"><td>Total</td><td class="num">${fmt(tl)}</td><td>Total</td><td class="num">${fmt(tr)}</td></tr></tfoot></table></div>`;
+        return h;
+      };
+
+      let html = '';
+      if (type === 'receiptpayment') {
+        const L = [['To Opening Balance', openBal], ...rows(cashInc).map(x => ['To ' + x[0], x[1]])];
+        const R = rows(cashExp).map(x => ['By ' + x[0], x[1]]);
+        R.push(['By Closing Balance (Cash in Hand)', cash + openBal]);
+        html = twoSide('Receipt &amp; Payment Account (all cashbook entries)', 'Receipts', 'Payments', L, R);
+      } else if (type === 'trialbalance') {
+        const acc = {};
+        const get = k => acc[k] || (acc[k] = { dr: 0, cr: 0 });
+        Object.entries(cashInc).forEach(([k, v]) => get(k).cr += v);
+        Object.entries(recv).forEach(([k, v]) => get(k).cr += v);
+        Object.entries(cashExp).forEach(([k, v]) => get(k).dr += v);
+        Object.entries(payb).forEach(([k, v]) => get(k).dr += v);
+        const list = Object.keys(acc).sort().map(k => [k, acc[k].dr, acc[k].cr]);
+        list.push(['Cash in Hand', cash > 0 ? cash : 0, cash < 0 ? -cash : 0]);
+        list.push(['Sundry Debtors (Receivables)', tRecv, 0]);
+        list.push(['Sundry Creditors (Payables)', 0, tPay]);
+        const td = list.reduce((a, x) => a + x[1], 0), tc = list.reduce((a, x) => a + x[2], 0);
+        html = `<h4 style="margin:6px 0; font-size:13px;">Trial Balance</h4><div class="table-scroll"><table><thead><tr><th style="width:50%;">Account</th><th class="num" style="width:25%;">Debit ₹</th><th class="num" style="width:25%;">Credit ₹</th></tr></thead><tbody>` +
+          list.map(x => `<tr><td>${esc(x[0])}</td><td class="num">${x[1] ? fmt(x[1]) : ''}</td><td class="num">${x[2] ? fmt(x[2]) : ''}</td></tr>`).join('') +
+          `</tbody><tfoot><tr class="total-row"><td>Total</td><td class="num">${fmt(td)}</td><td class="num">${fmt(tc)}</td></tr></tfoot></table></div>`;
+      } else if (type === 'profitloss') {
+        const eMap = {}, iMap = {};
+        Object.entries(cashExp).forEach(([k, v]) => addTo(eMap, k, v));
+        Object.entries(payb).forEach(([k, v]) => addTo(eMap, k, v));
+        Object.entries(cashInc).forEach(([k, v]) => addTo(iMap, k, v));
+        Object.entries(recv).forEach(([k, v]) => addTo(iMap, k, v));
+        const L = rows(eMap).map(x => ['To ' + x[0], x[1]]);
+        const R = rows(iMap).map(x => ['By ' + x[0], x[1]]);
+        if (profit >= 0) L.push(['To Net Profit', profit]); else R.push(['By Net Loss', -profit]);
+        html = twoSide('Profit &amp; Loss Account (incl. receivables / payables)', 'Expenses', 'Income', L, R);
+      } else {
+        const L = [], R = [];
+        if (profit >= 0) L.push(['Capital / Net Profit', profit]); else R.push(['Net Loss', -profit]);
+        if (tPay) L.push(['Sundry Creditors (Payables)', tPay]);
+        if (cash >= 0) R.push(['Cash in Hand', cash]); else L.push(['Cash Overdrawn', -cash]);
+        if (tRecv) R.push(['Sundry Debtors (Receivables)', tRecv]);
+        html = twoSide('Balance Sheet', 'Liabilities', 'Assets', L, R);
+      }
+      document.getElementById('finalReportBox').innerHTML = html;
+    }
+
+    /* Backup Export & Import */
+    function exportDataBackup() {
+      const backupData = {
+        sheets: sheets,
+        receivables: receivables,
+        payables: payables,
+        customers: customers,
+        account_groups: accountGroups,
+        account_master: accountMaster,
+        app_name: appTitle,
+        export_date: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `FinTrack_Backup_${today}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Backup exported successfully!", "success");
+    }
+
+    function importDataBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported.sheets) sheets = imported.sheets;
+          if (imported.receivables) receivables = imported.receivables;
+          if (imported.payables) payables = imported.payables;
+          if (imported.customers) customers = imported.customers;
+          if (Array.isArray(imported.account_groups) && imported.account_groups.length) { accountGroups = imported.account_groups; normalizeAccountGroups(); }
+          if (Array.isArray(imported.account_master)) accountMaster = imported.account_master;
+          saveAllData();
+          renderDashboard();
+          renderSheet();
+          renderDueTables();
+          renderCustomers();
+          renderAccountGroups();
+          renderAccountMaster();
+          showToast("Data restored successfully!", "success");
+        } catch(err) {
+          showToast("Invalid backup JSON file", "error");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /* Profile & Company Profile */
+    let companyProfile = (function () { try { return JSON.parse(localStorage.getItem('fintrack_company_profile')) || {}; } catch (e) { return {}; } })();
+
+    // Role comes from Supabase app_metadata, which only the project owner can set (users cannot edit it)
+    function isSuperAdmin() {
+      return !!(fintrackAuthUser && fintrackAuthUser.app_metadata && fintrackAuthUser.app_metadata.role === 'super_admin');
+    }
+
+    function openProfileModal() {
+      const name = (currentUser && currentUser.username) || '-';
+      document.getElementById('profAvatar').innerText = (name[0] || 'U').toUpperCase();
+      const meta = (fintrackAuthUser && fintrackAuthUser.user_metadata) || {};
+      document.getElementById('profUsername').innerText = meta.login_email || name;
+      document.getElementById('profRole').innerText = isSuperAdmin() ? 'Super Admin' : 'Tenant';
+      const c = fintrackAuthUser && fintrackAuthUser.created_at;
+      document.getElementById('profSince').innerText = c ? new Date(c).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+      document.getElementById('profileModal').style.display = 'flex';
+    }
+
+    function renderCompanyModal() {
+      const admin = isSuperAdmin();
+      const set = (id, v) => { const el = document.getElementById(id); el.value = v || ''; el.disabled = !admin; el.style.opacity = admin ? '1' : '0.85'; };
+      set('cpEmail', companyProfile.email);
+      set('cpPhone', companyProfile.phone);
+      set('cpUpiId', companyProfile.upi_id);
+      const img = document.getElementById('cpQrImg');
+      const has = !!companyProfile.upi_qr;
+      img.src = has ? companyProfile.upi_qr : '';
+      img.style.display = has ? 'inline-block' : 'none';
+      document.getElementById('cpQrEmpty').style.display = has ? 'none' : 'block';
+      document.getElementById('cpAdminOnly').style.display = admin ? 'block' : 'none';
+      document.getElementById('cpSaveBtn').style.display = admin ? 'block' : 'none';
+      const badge = document.getElementById('cpBadge');
+      badge.innerText = admin ? '✏️ Super Admin: you can edit these details' : '🔒 View only. Use these details to pay the registration amount.';
+      badge.style.background = admin ? '#ecfdf5' : '#f1f5f9';
+      badge.style.color = admin ? '#047857' : '#475569';
+    }
+
+    async function loadCompanyProfile() {
+      try {
+        const { data, error } = await fintrackSupabase.from('company_profile').select('*').eq('id', 1).maybeSingle();
+        if (error) return { ok: false, error };
+        if (data) {
+          companyProfile = { email: data.email || '', phone: data.phone || '', upi_id: data.upi_id || '', upi_qr: data.upi_qr || '' };
+          localStorage.setItem('fintrack_company_profile', JSON.stringify(companyProfile));
+        }
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e }; }
+    }
+
+    async function openCompanyModal() {
+      const note = document.getElementById('cpNote');
+      note.style.display = 'none';
+      renderCompanyModal();
+      document.getElementById('companyModal').style.display = 'flex';
+      const r = await loadCompanyProfile();
+      renderCompanyModal();
+      if (!r.ok && isSuperAdmin()) {
+        note.innerText = 'Company profile table is not set up in Supabase yet. Run supabase_company_profile.sql once.';
+        note.style.display = 'block';
+      }
+    }
+
+    function onCompanyQrPicked(ev) {
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const max = 520, k = Math.min(1, max / Math.max(img.width, img.height));
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          const x = c.getContext('2d');
+          x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+          x.drawImage(img, 0, 0, c.width, c.height);
+          // keep any unsaved typed values, then show the new QR
+          companyProfile.email = document.getElementById('cpEmail').value;
+          companyProfile.phone = document.getElementById('cpPhone').value;
+          companyProfile.upi_id = document.getElementById('cpUpiId').value;
+          companyProfile.upi_qr = c.toDataURL('image/png');
+          renderCompanyModal();
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(f);
+      ev.target.value = '';
+    }
+
+    async function saveCompanyProfile() {
+      if (!isSuperAdmin()) return showToast('Only Super Admin can edit', 'error');
+      const row = {
+        id: 1,
+        email: document.getElementById('cpEmail').value.trim(),
+        phone: document.getElementById('cpPhone').value.trim(),
+        upi_id: document.getElementById('cpUpiId').value.trim(),
+        upi_qr: companyProfile.upi_qr || '',
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await fintrackSupabase.from('company_profile').upsert(row, { onConflict: 'id' });
+      if (error) return showToast('Save failed: ' + error.message, 'error');
+      companyProfile = { email: row.email, phone: row.phone, upi_id: row.upi_id, upi_qr: row.upi_qr };
+      localStorage.setItem('fintrack_company_profile', JSON.stringify(companyProfile));
+      closeModal('companyModal');
+      showToast('Company profile saved', 'success');
+    }
+
+
+    /* ===== Service Admin console ===== */
+    let admFirms = [];
+    let admCurrentFirm = null;
+
+    function showAdminApp() {
+      document.getElementById('admin-app').style.display = 'block';
+      document.getElementById('admUserName').innerText = currentUser.username;
+      document.getElementById('admUserEmail').innerText = (fintrackAuthUser && fintrackAuthUser.email) || '';
+      admGo('overview');
+    }
+
+    function admToggleDrawer(open) {
+      document.getElementById('admDrawer').classList.toggle('open', open);
+      document.getElementById('admScrim').classList.toggle('open', open);
+    }
+
+    function admFilterMenu() {
+      const q = document.getElementById('admMenuSearch').value.trim().toLowerCase();
+      document.querySelectorAll('#admNav a').forEach(a => { a.style.display = a.innerText.toLowerCase().includes(q) ? 'block' : 'none'; });
+    }
+
+    function admGo(page) {
+      ['overview', 'firms', 'admins', 'company', 'about'].forEach(p => {
+        document.getElementById('admPage-' + p).style.display = p === page ? 'block' : 'none';
+      });
+      document.querySelectorAll('#admNav a').forEach(a => a.classList.toggle('active', a.dataset.page === page));
+      const t = { overview: 'Service overview', firms: 'Firms', admins: 'Service admins', company: 'Company profile', about: "About & what's new" };
+      document.getElementById('admTopTitle').innerText = t[page];
+      admToggleDrawer(false);
+      if (page === 'overview' || page === 'firms') admLoadFirms();
+      if (page === 'admins') admLoadAdmins();
+      if (page === 'company') admRenderCompany();
+    }
+
+    function admFirmState(f) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (f.status === 'blocked') return 'blocked';
+      if (f.valid_until && f.valid_until < today) return 'expired';
+      return f.status === 'active' ? 'active' : 'trial';
+    }
+    const admFmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+    const admMoney = n => '₹ ' + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const admName = f => f.firm_name || f.owner_name || f.username;
+    const admLabel = { trial: 'Trial', active: 'Active', expired: 'Expired', blocked: 'Suspended' };
+    let admPayments = [];
+
+    async function admLoadFirms() {
+      const { data, error } = await fintrackSupabase.from('tenant_registry').select('*').order('created_at', { ascending: false });
+      if (error) {
+        const msg = 'Firms table is not set up. Run supabase_admin_setup.sql in Supabase.';
+        document.getElementById('admStats').innerHTML = '';
+        document.getElementById('admOverviewSub').innerText = msg;
+        document.getElementById('admDue').innerHTML = '';
+        document.getElementById('admRecent').innerHTML = '';
+        document.getElementById('admFirmList').innerHTML = `<div class="adm-row">${msg}</div>`;
+        return;
+      }
+      admFirms = data || [];
+      const pr = await fintrackSupabase.from('tenant_payments').select('*').order('paid_at', { ascending: false });
+      admPayments = pr.error ? [] : (pr.data || []);
+      admRenderStats();
+      admRenderFirms();
+    }
+
+    function admRenderStats() {
+      const c = { trial: 0, active: 0, expired: 0, blocked: 0 };
+      admFirms.forEach(f => { c[admFirmState(f)]++; });
+      const year = new Date().getFullYear();
+      const renewals = admPayments.filter(p => new Date(p.paid_at).getFullYear() === year).reduce((t, p) => t + (Number(p.amount) || 0), 0);
+      document.getElementById('admOverviewSub').innerText =
+        `${admFirms.length} firms, ${admFirms.length} users, renewals this year ${admMoney(renewals)}`;
+      const cell = (n, l) => `<div class="adm-cell"><b>${n}</b><span>${l}</span></div>`;
+      document.getElementById('admStats').innerHTML =
+        cell(admFirms.length, 'All firms') + cell(c.active, 'Active') + cell(c.trial, 'On trial') +
+        cell(c.expired, 'Expired') + cell(c.blocked, 'Suspended') + '<div class="adm-cell fill"></div>';
+
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const limit = new Date(today.getTime() + 30 * 86400000);
+      const due = admFirms.filter(f => f.valid_until && f.status !== 'blocked' && new Date(f.valid_until) >= today && new Date(f.valid_until) <= limit)
+        .sort((a, b) => a.valid_until.localeCompare(b.valid_until));
+      document.getElementById('admDue').innerHTML = due.map(f =>
+        `<div class="adm-row"><div>${escHtml(String(admName(f)).toUpperCase())}</div><div style="text-align:right;"><span class="adm-pill ${admFirmState(f)}">${admLabel[admFirmState(f)]}</span><small>${admFmtDate(f.valid_until)}</small></div></div>`
+      ).join('') || '<div class="adm-row" style="color:#64748b; padding:16px 14px;">Nothing due.</div>';
+
+      document.getElementById('admRecent').innerHTML = admFirms.slice(0, 5).map(f =>
+        `<div class="adm-row"><div>${escHtml(String(admName(f)).toUpperCase())}</div><div style="display:flex; align-items:center; gap:10px;"><span class="adm-pill ${admFirmState(f)}">${admLabel[admFirmState(f)]}</span><span style="color:#64748b; font-size:12.5px;">${admFmtDate(f.created_at)}</span></div></div>`
+      ).join('') || '<div class="adm-row">No firms yet</div>';
+    }
+
+    function admDownloadCsv(kind) {
+      const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      let rows;
+      if (kind === 'firms') {
+        rows = [['Firm', 'Owner', 'Mobile', 'E-mail', 'Address', 'Business', 'Status', 'Registered', 'Valid until', 'Amount paid', 'Notes']]
+          .concat(admFirms.map(f => [admName(f), f.owner_name, f.mobile, f.email, f.address, f.business_type, admLabel[admFirmState(f)], f.created_at, f.valid_until || '', f.amount_paid, f.notes || '']));
+      } else {
+        const name = id => { const f = admFirms.find(f => f.user_id === id); return f ? admName(f) : id; };
+        rows = [['Firm', 'Amount', 'Paid on']].concat(admPayments.map(p => [name(p.user_id), p.amount, p.paid_at]));
+      }
+      const blob = new Blob([rows.map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `fintrack_${kind}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    function admRenderFirms() {
+      const q = (document.getElementById('admFirmSearch').value || '').trim().toLowerCase();
+      const list = admFirms.filter(f => !q || [f.username, f.firm_name, f.owner_name, f.mobile, f.email].some(x => String(x || '').toLowerCase().includes(q)));
+      document.getElementById('admFirmList').innerHTML = list.map(f => {
+        const st = admFirmState(f);
+        return `<div class="adm-row" style="cursor:pointer;" onclick="admOpenFirm('${f.user_id}')">
+          <div>${escHtml(admName(f))}<small>${escHtml([f.owner_name, f.mobile].filter(Boolean).join(' · '))}${f.owner_name || f.mobile ? '<br>' : ''}Registered ${admFmtDate(f.created_at)} · Valid until ${f.valid_until ? admFmtDate(f.valid_until) : 'no expiry'}</small></div>
+          <span class="adm-pill ${st}">${admLabel[st]}</span></div>`;
+      }).join('') || '<div class="adm-row">No firms found</div>';
+    }
+
+    function admOpenFirm(id) {
+      const f = admFirms.find(x => x.user_id === id);
+      if (!f) return;
+      admCurrentFirm = f;
+      document.getElementById('admFirmTitle').innerText = admName(f);
+      document.getElementById('admFirmInfo').innerHTML = [['Owner', f.owner_name], ['Mobile', f.mobile], ['E-mail', f.email], ['Business', f.business_type], ['Address', f.address]].filter(x => x[1]).map(x => `<div><b>${x[0]}:</b> ${escHtml(x[1])}</div>`).join('');
+      document.getElementById('admFirmStatus').value = f.status || 'trial';
+      document.getElementById('admFirmUntil').value = f.valid_until || '';
+      document.getElementById('admFirmPay').value = '';
+      document.getElementById('admFirmPaid').innerText = Number(f.amount_paid) || 0;
+      document.getElementById('admFirmNotes').value = f.notes || '';
+      document.getElementById('admFirmNewPass').value = '';
+      document.getElementById('admFirmModal').style.display = 'flex';
+    }
+
+    async function admSaveFirm() {
+      const f = admCurrentFirm;
+      if (!f) return;
+      const add = parseFloat(document.getElementById('admFirmPay').value) || 0;
+      const upd = {
+        status: document.getElementById('admFirmStatus').value,
+        valid_until: document.getElementById('admFirmUntil').value || null,
+        amount_paid: (Number(f.amount_paid) || 0) + add,
+        notes: document.getElementById('admFirmNotes').value.trim()
+      };
+      const { error } = await fintrackSupabase.from('tenant_registry').update(upd).eq('user_id', f.user_id);
+      if (error) return showToast('Save failed: ' + error.message, 'error');
+      if (add > 0) {
+        const pe = await fintrackSupabase.from('tenant_payments').insert({ user_id: f.user_id, amount: add });
+        if (pe.error) showToast('Saved, but payment log needs supabase_admin_payments.sql', 'error');
+      }
+      const np = document.getElementById('admFirmNewPass').value.trim();
+      if (np) {
+        if (np.length < 6) return showToast('New password must be at least 6 characters', 'error');
+        const pr = await fintrackSupabase.rpc('admin_reset_password', { p_user_id: f.user_id, p_new_password: np });
+        if (pr.error) return showToast('Password reset failed: ' + pr.error.message, 'error');
+        showToast('Password reset. Tell the firm the new password.', 'success');
+      } else {
+        showToast('Firm updated', 'success');
+      }
+      closeModal('admFirmModal');
+      admLoadFirms();
+    }
+
+    async function admLoadAdmins() {
+      const box = document.getElementById('admAdminList');
+      const { data, error } = await fintrackSupabase.rpc('admin_list_admins');
+      if (error) { box.innerHTML = '<div class="adm-row">Not set up. Run supabase_admin_setup.sql in Supabase.</div>'; return; }
+      box.innerHTML = (data || []).map(a => {
+        const me = fintrackAuthUser && a.user_id === fintrackAuthUser.id;
+        return `<div class="adm-row"><div>${escHtml(a.username)}${me ? ' (you)' : ''}<small>${escHtml(a.email)}</small></div>${me ? '' : `<button class="adm-btn" style="background:#b91c1c;" onclick="admRemoveAdmin('${escHtml(a.username)}')">Remove</button>`}</div>`;
+      }).join('') || '<div class="adm-row">No admins</div>';
+    }
+
+    async function admSetAdmin(username, make) {
+      let { error } = await fintrackSupabase.rpc('admin_set_admin', { p_username: fintrackUserKey(username), p_make: make });
+      if (error && /not found/i.test(error.message) && String(username).includes('@')) {
+        ({ error } = await fintrackSupabase.rpc('admin_set_admin', { p_username: username, p_make: make }));
+      }
+      if (error) return showToast(error.message, 'error');
+      showToast(make ? 'Admin added. They must log in again.' : 'Admin removed', 'success');
+      admLoadAdmins();
+    }
+    function admAddAdmin() {
+      const u = document.getElementById('admNewAdmin').value.trim().toLowerCase();
+      if (!u) return showToast('Enter a username', 'error');
+      document.getElementById('admNewAdmin').value = '';
+      admSetAdmin(u, true);
+    }
+    function admRemoveAdmin(u) { admSetAdmin(u, false); }
+
+    async function admRenderCompany() {
+      await loadCompanyProfile();
+      const p = companyProfile || {};
+      document.getElementById('admCompanySummary').innerHTML =
+        `<div><b>Email:</b> ${escHtml(p.email || '-')}</div><div><b>Contact:</b> ${escHtml(p.phone || '-')}</div><div><b>UPI ID:</b> ${escHtml(p.upi_id || '-')}</div>` +
+        (p.upi_qr ? `<img src="${p.upi_qr}" style="max-width:160px; margin-top:6px; border:1px solid #e2e8f0; border-radius:10px; padding:5px;">` : '<div style="color:#94a3b8;">No QR added</div>');
+    }
+
+    /* Tenant lock: blocked or expired accounts see payment details only */
+    async function showTenantLockIfNeeded() {
+      try {
+        const { data, error } = await fintrackSupabase.from('tenant_registry').select('status,valid_until').eq('user_id', fintrackAuthUser.id).maybeSingle();
+        if (error || !data) return false;               // table missing or no row: do not lock
+        const st = admFirmState(data);
+        if (st !== 'blocked' && st !== 'expired') return false;
+        await loadCompanyProfile();
+        const p = companyProfile || {};
+        document.getElementById('lockTitle').innerText = st === 'blocked' ? 'Account suspended' : 'Subscription ended';
+        document.getElementById('lockMsg').innerText = st === 'blocked'
+          ? 'Your account is suspended. Please contact us.'
+          : 'Your trial / subscription has ended. Pay the amount below and contact us to continue.';
+        document.getElementById('lockCompany').innerHTML =
+          (p.upi_qr ? `<div style="text-align:center;"><img src="${p.upi_qr}" style="max-width:170px; width:100%; border:1px solid #e2e8f0; border-radius:10px; padding:5px;"></div>` : '') +
+          (p.upi_id ? `<div><b>UPI ID:</b> ${escHtml(p.upi_id)}</div>` : '') +
+          (p.phone ? `<div><b>Contact:</b> <a href="tel:${escHtml(p.phone)}">${escHtml(p.phone)}</a></div>` : '') +
+          (p.email ? `<div><b>Email:</b> <a href="mailto:${escHtml(p.email)}">${escHtml(p.email)}</a></div>` : '');
+        document.getElementById('tenantLockScreen').style.display = 'flex';
+        return true;
+      } catch (e) { return false; }
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K') && document.getElementById('admin-app').style.display === 'block') {
+        e.preventDefault();
+        document.getElementById('admMenuSearch').focus();
+      }
+    });
+
+    /* Logout Action */
+    function promptSimpleLogout() {
+      document.getElementById('simpleLogoutModal').style.display = 'flex';
+    }
+
+    async function executeConfirmedLogout() {
+      try {
+        await fintrackSupabase.auth.signOut();
+        currentUser = null;
+        fintrackAuthUser = null;
+        localStorage.removeItem('cashbook_active_user');
+        closeModal('simpleLogoutModal');
+        showToast("Logged out successfully", "success");
+        checkAuthSession();
+      } catch(e) {
+        showToast("Logout failed", "error");
+      }
+    }
+
+    /* Navigation & Modal Keyboard Control */
+    function handleBackNavigation() {
+      const openModal = Array.from(document.querySelectorAll('.modal-overlay')).find(m => window.getComputedStyle(m).display === 'flex');
+      if (openModal) {
+        openModal.style.display = 'none';
+        return;
+      }
+
+      const curSection = navigationHistory[navigationHistory.length - 1] || 'dashboard';
+
+      if (curSection !== 'dashboard') {
+        navigationHistory.pop();
+        const prevSection = navigationHistory[navigationHistory.length - 1] || 'dashboard';
+        switchSection(prevSection, true);
+      }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'i' || e.key === 'I')) {
+        e.preventDefault();
+        const txVisible = document.getElementById('transaction-section') && document.getElementById('transaction-section').style.display !== 'none';
+        if (txVisible) openAddForActiveTab(); else openQuickEntryModal('income');
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        handleBackNavigation();
+      }
+    });
+
+    window.addEventListener('popstate', function(e) {
+      e.preventDefault();
+      handleBackNavigation();
+    });
+
+    /* Modals Control */
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function openRenameModal() {
+      document.getElementById('modalPageNameInput').value = sheets[currentSheetIndex].name;
+      document.getElementById('pageModal').style.display = 'flex';
+    }
+    function copyAndAddNewSheet() {
+      isCreatingNew = true;
+      document.getElementById('modalHeading').innerText = 'New Page Name';
+      document.getElementById('modalPageNameInput').value = `Page ${sheets.length + 1}`;
+      document.getElementById('pageModal').style.display = 'flex';
+    }
+    function savePageModal() {
+      const val = document.getElementById('modalPageNameInput').value.trim() || `Page ${sheets.length + 1}`;
+      if (isCreatingNew) {
+        sheets.push({ name: val, rows: [] });
+        currentSheetIndex = sheets.length - 1;
+      } else {
+        sheets[currentSheetIndex].name = val;
+      }
+      isCreatingNew = false;
+      saveAllData();
+      renderSheet();
+      closeModal('pageModal');
+    }
+    function deleteCurrentSheet() {
+      if (confirm("Delete this page?")) {
+        sheets.splice(currentSheetIndex, 1);
+        currentSheetIndex = Math.max(0, sheets.length - 1);
+        saveAllData();
+        renderSheet();
+        closeModal('pageModal');
+      }
+    }
+    function openAppNameModal() {
+      document.getElementById('modalAppNameInput').value = appTitle;
+      document.getElementById('appNameModal').style.display = 'flex';
+    }
+    function saveAppName() {
+      appTitle = document.getElementById('modalAppNameInput').value.trim() || "FinTrack";
+      document.getElementById('appBrandTitle').innerText = appTitle;
+      localStorage.setItem('cashbook_app_name', appTitle);
+      saveAllData();
+      closeModal('appNameModal');
+      showToast("App title updated", "success");
+    }
+    /* Re-verify the logged-in user's current password (also refreshes the session) */
+    async function reauthCurrentUser(currentPass) {
+      const { data: sess } = await fintrackSupabase.auth.getSession();
+      const email = (sess && sess.session && sess.session.user && sess.session.user.email)
+        || (fintrackAuthUser && fintrackAuthUser.email);
+      if (!email) { showToast("Session expired, please login again", "error"); return false; }
+      const { data, error } = await fintrackSupabase.auth.signInWithPassword({ email, password: currentPass });
+      if (error) { showToast("Current password is wrong", "error"); return false; }
+      if (data && data.user) fintrackAuthUser = data.user;
+      return true;
+    }
+
+    function openChangePasswordModal() {
+      ['currentPasswordInput', 'newPasswordInput', 'confirmPasswordInput'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('changePasswordModal').style.display = 'flex';
+    }
+    async function handleUpdatePassword() {
+      const cur = document.getElementById('currentPasswordInput').value.trim();
+      const pass = document.getElementById('newPasswordInput').value.trim();
+      const conf = document.getElementById('confirmPasswordInput').value.trim();
+      if (!cur) return showToast("Enter current password", "error");
+      if (pass.length < 6) return showToast("New password min 6 chars", "error");
+      if (pass !== conf) return showToast("New passwords do not match", "error");
+      if (pass === cur) return showToast("New password must be different from current", "error");
+
+      const btn = document.getElementById('changePwdSaveBtn');
+      btn.disabled = true; btn.innerText = 'Updating...';
+      try {
+        if (!(await reauthCurrentUser(cur))) return;
+        const { error } = await fintrackSupabase.auth.updateUser({ password: pass });
+        if (error) {
+          console.error("Change password error:", error);
+          const m = String(error.message || '');
+          if (/session/i.test(m)) return showToast("Session expired, please login again", "error");
+          if (/different|same/i.test(m)) return showToast("New password must be different from current", "error");
+          return showToast("Failed: " + m, "error");
+        }
+        closeModal('changePasswordModal');
+        showToast("Password updated successfully", "success");
+      } catch (e) {
+        console.error(e);
+        showToast("Network error, try again", "error");
+      } finally {
+        btn.disabled = false; btn.innerText = 'Update Password';
+      }
+    }
+    function renderForgotContact() {
+      const p = companyProfile || {};
+      document.getElementById('forgotContact').innerHTML =
+        (p.phone ? `<div><b>Call / WhatsApp:</b> <a href="tel:${escHtml(p.phone)}" style="color:#2563eb; font-weight:700;">${escHtml(p.phone)}</a></div>` : '') +
+        (p.email ? `<div><b>Email:</b> <a href="mailto:${escHtml(p.email)}" style="color:#2563eb; font-weight:700; word-break:break-all;">${escHtml(p.email)}</a></div>` : '') +
+        ((p.phone || p.email) ? '' : '<div style="color:#94a3b8;">Contact details are not added yet.</div>');
+    }
+    function openForgotModal() {
+      renderForgotContact();
+      document.getElementById('forgotModal').style.display = 'flex';
+      loadCompanyProfile().then(renderForgotContact);
+    }
+
+    /* Auth Submit */
+    async function handleAuthSubmit() {
+      const u = document.getElementById('loginUsername').value.trim();
+      const p = document.getElementById('loginPassword').value.trim();
+      if (!u || !p) return showToast("Fill all credentials", "error");
+
+      try {
+        await fintrackLogin(u, p);
+        showToast("Welcome back!", "success");
+        await checkAuthSession();
+      } catch(e) {
+        showToast(e.message || "Auth error", "error");
+      }
+    }
+    function toggleAuthModeView() { showRegisterScreen(true); }
+
+    function renderRegCompany() {
+      const p = companyProfile || {};
+      const show = (rowId, valId, val, href) => {
+        const row = document.getElementById(rowId), el = document.getElementById(valId);
+        row.style.display = val ? 'block' : 'none';
+        el.innerText = val || '';
+        if (href && val) el.href = href;
+      };
+      show('regUpiRow', 'regUpiId', p.upi_id);
+      show('regPhoneRow', 'regPhone', p.phone, 'tel:' + String(p.phone || '').replace(/[^\d+]/g, ''));
+      show('regEmailRow', 'regEmail', p.email, 'mailto:' + (p.email || ''));
+      const img = document.getElementById('regQrImg');
+      img.style.display = p.upi_qr ? 'inline-block' : 'none';
+      if (p.upi_qr) img.src = p.upi_qr;
+      document.getElementById('regCompanyEmpty').style.display = (p.upi_id || p.phone || p.email || p.upi_qr) ? 'none' : 'block';
+    }
+
+    function copyRegUpi() {
+      const v = (companyProfile && companyProfile.upi_id) || '';
+      if (!v) return;
+      if (navigator.clipboard) navigator.clipboard.writeText(v).then(() => showToast('UPI ID copied', 'success'), () => showToast(v, 'success'));
+      else showToast(v, 'success');
+    }
+
+    /* PWA Direct Installation */
+    let deferredInstallPrompt = null;
+
+    window.addEventListener("beforeinstallprompt", function(event) {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+    });
+
+    function isStandaloneApp() {
+      return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+    }
+
+    function showInstallHelp(title, html) {
+      document.getElementById('installHelpTitle').innerText = title;
+      document.getElementById('installHelpBody').innerHTML = html;
+      document.getElementById('installHelpModal').style.display = 'flex';
+    }
+
+    async function installFinTrack() {
+      if (isStandaloneApp()) {
+        showToast("App is already installed", "success");
+        return;
+      }
+
+      // Android / Windows / Mac / Linux (Chrome, Edge, Samsung Internet): direct install prompt
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const result = await deferredInstallPrompt.userChoice;
+        if (result.outcome === 'accepted') showToast("App installing...", "success");
+        deferredInstallPrompt = null;
+        return;
+      }
+
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/i.test(ua);
+      const isMacSafari = !isIOS && /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua) && /Macintosh/i.test(ua);
+
+      if (!/^https?:$/.test(location.protocol)) {
+        return showInstallHelp('Host the app first',
+          'Install works only when the app is opened from an <b>https://</b> link (for example Netlify, GitHub Pages or Vercel). It cannot be installed from a file opened on the device.<br><br>Upload <b>index.html</b>, <b>manifest.json</b>, <b>sw.js</b>, <b>icon-192.png</b> and <b>icon-512.png</b> together, then open the https link.');
+      }
+
+      if (isIOS) {
+        return showInstallHelp('Install on iPhone / iPad',
+          '1. Open this page in <b>Safari</b> (not Chrome or other apps).<br>' +
+          '2. Tap the <b>Share</b> button (square with an up arrow).<br>' +
+          '3. Scroll down and tap <b>Add to Home Screen</b>.<br>' +
+          '4. Tap <b>Add</b>. FinTrack now opens from your Home Screen like an app.');
+      }
+      if (isAndroid) {
+        return showInstallHelp('Install on Android',
+          '1. Open this page in <b>Chrome</b>.<br>' +
+          '2. Tap the <b>⋮</b> menu (top right).<br>' +
+          '3. Tap <b>Install app</b> (or <b>Add to Home screen</b>) and confirm.');
+      }
+      if (isMacSafari) {
+        return showInstallHelp('Install on Mac (Safari)',
+          'In the menu bar choose <b>File → Add to Dock</b>, then click <b>Add</b>.');
+      }
+      showInstallHelp('Install on Computer',
+        '<b>Chrome / Edge:</b> click the <b>Install</b> icon at the right end of the address bar, or open the <b>⋮</b> menu and choose <b>Install FinTrack</b> (Edge: <b>Apps → Install this site as an app</b>).<br><br>If you do not see it, refresh the page once and try again.');
+    }
+
+    window.addEventListener("appinstalled", function() {
+      showToast("App installed successfully!", "success");
+      deferredInstallPrompt = null;
+    });
+
+    checkAuthSession();
+  </script>
+</body>
+</html>
