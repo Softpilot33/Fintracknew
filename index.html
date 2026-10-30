@@ -408,8 +408,22 @@
     .mode-pill.active { background: #2563eb; border-color: #2563eb; color: #fff; }
 
     /* ===== Service Admin console ===== */
-    #admin-login-container, #admin-app, #tenantLockScreen { display: none; position: fixed; inset: 0; font-family: inherit; }
-    #admin-login-container { z-index: 100001; background: #1e293b; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+    /* ===== Register your firm ===== */
+    #register-screen-container { display: none; position: fixed; inset: 0; z-index: 100000; background: #fff; overflow-y: auto; }
+    .rf-wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px 24px; }
+    .rf-wrap h1 { font-size: 24px; font-weight: 800; color: #1f2937; margin-bottom: 4px; }
+    .rf-sub { font-size: 13.5px; color: #6b7280; line-height: 1.4; margin-bottom: 8px; }
+    .rf-label { display: block; font-size: 13px; font-weight: 700; color: #1f2937; margin: 10px 0 3px; }
+    .rf-input { width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; font-family: inherit; color: #111827; background: #fff; outline: none; }
+    .rf-input:focus { border-color: #1e3a5f; box-shadow: 0 0 0 3px rgba(30, 58, 95, .15); }
+    select.rf-input { appearance: auto; }
+    textarea.rf-input { resize: vertical; }
+    .rf-hint { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.35; }
+    .rf-btn { width: 100%; margin-top: 12px; padding: 12px; border: none; border-radius: 8px; background: #1f2937; color: #fff; font-size: 15.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .rf-btn:disabled { opacity: .6; }
+    .rf-foot { text-align: center; margin-top: 10px; font-size: 14px; color: #374151; }
+    .rf-foot a { color: #1e3a5f; text-decoration: underline; cursor: pointer; }
+    #admin-app, #tenantLockScreen { display: none; position: fixed; inset: 0; font-family: inherit; }
     #tenantLockScreen { z-index: 100003; background: #0f172a; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
     #admin-app { z-index: 100002; background: #f1f5f9; }
     .adm-card { background: #fff; border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 360px; margin: auto; }
@@ -858,11 +872,7 @@
       <p class="subtitle" id="authSubtitle">Please Login</p>
 
       <div class="fintrack-input-group">
-        <input type="text" id="loginUsername" placeholder="Username" autocomplete="username">
-      </div>
-
-      <div class="fintrack-input-group" id="pinInputGroup" style="display: none;">
-        <input type="tel" id="userRecoveryPin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4-Digit Recovery PIN">
+        <input type="text" id="loginUsername" placeholder="Username or Email" autocomplete="username">
       </div>
 
       <div class="fintrack-input-group" id="passwordInputGroup">
@@ -872,8 +882,40 @@
         </div>
       </div>
 
+      <button class="fintrack-btn" id="authSubmitBtn" onclick="handleAuthSubmit()">Login</button>
+
+      <div class="fintrack-card-footer">
+        <a id="forgotPwdLink" onclick="openForgotModal()">Forgot Password?</a>
+        <a id="authModeToggleLink" onclick="toggleAuthModeView()">Register</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register your firm -->
+  <div id="register-screen-container">
+    <div class="rf-wrap">
+      <h1>Register your firm</h1>
+      <p class="rf-sub">Start your free trial. Your firm's data stays separate and private.</p>
+
+      <label class="rf-label" for="rfOwner">Your name</label>
+      <input class="rf-input" id="rfOwner" type="text" autocomplete="name">
+
+      <label class="rf-label" for="rfMobile">Mobile</label>
+      <input class="rf-input" id="rfMobile" type="tel" inputmode="numeric" autocomplete="tel">
+
+      <label class="rf-label" for="rfEmail">E-mail</label>
+      <input class="rf-input" id="rfEmail" type="email" autocomplete="email">
+      <div class="rf-hint">You will log in with this</div>
+
+      <label class="rf-label" for="rfAddress">Address</label>
+      <textarea class="rf-input" id="rfAddress" rows="2" autocomplete="street-address"></textarea>
+
+      <label class="rf-label" for="rfPassword">Password</label>
+      <input class="rf-input" id="rfPassword" type="password" autocomplete="new-password">
+      <div class="rf-hint">At least 6 characters</div>
+
       <!-- Registration payment details (shown only on Register) -->
-      <div id="regCompanyBox" style="display:none; margin:2px 0 14px; padding:12px; border:1px solid #bbf7d0; background:#f0fdf4; border-radius:12px; text-align:left;">
+      <div id="regCompanyBox" style="display:block; margin:12px 0 2px; padding:10px; border:1px solid #bbf7d0; background:#f0fdf4; border-radius:12px; text-align:left;">
         <div style="font-size:12.5px; font-weight:800; color:#166534; margin-bottom:2px;">Registration Fee Payment</div>
         <div style="font-size:11px; color:#475569; margin-bottom:8px;">Pay the registration amount using the details below, then register and contact us with your payment screenshot.</div>
         <div style="text-align:center;">
@@ -887,27 +929,9 @@
         <div id="regCompanyEmpty" style="display:none; font-size:11.5px; color:#94a3b8;">Payment details will appear here once added by the admin.</div>
       </div>
 
-      <button class="fintrack-btn" id="authSubmitBtn" onclick="handleAuthSubmit()">Login</button>
 
-      <div class="fintrack-card-footer">
-        <a id="forgotPwdLink" onclick="openForgotModal()">Forgot Password?</a>
-        <a id="authModeToggleLink" onclick="toggleAuthModeView()">Register</a>
-      </div>
-      <div style="text-align:center; margin-top:12px;"><a style="font-size:11px; color:#94a3b8; cursor:pointer;" onclick="showAdminLogin(true)">Service admin login</a></div>
-    </div>
-  </div>
-
-  <!-- Service Admin Login (separate) -->
-  <div id="admin-login-container">
-    <div class="adm-card">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-        <div class="adm-logo">₹</div>
-        <div><h1>FinTrack</h1><div class="adm-sub" style="margin:0;">Service admin</div></div>
-      </div>
-      <input type="text" id="admUsername" class="adm-input" placeholder="Admin email or username" autocomplete="username">
-      <input type="password" id="admPassword" class="adm-input" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') adminLogin()">
-      <button class="adm-btn" style="width:100%; padding:11px;" onclick="adminLogin()">Login</button>
-      <div style="text-align:center; margin-top:14px;"><a style="font-size:12px; color:#2563eb; cursor:pointer;" onclick="showAdminLogin(false)">← Back to user login</a></div>
+      <button class="rf-btn" id="rfSubmitBtn" onclick="handleRegisterFirm()">Create firm and log in</button>
+      <div class="rf-foot">Already registered? <a onclick="showRegisterScreen(false)">Log in</a></div>
     </div>
   </div>
 
@@ -995,6 +1019,7 @@
   <div class="modal-overlay" id="admFirmModal">
     <div class="modal-box">
       <h4 id="admFirmTitle">Firm</h4>
+      <div id="admFirmInfo" style="text-align:left; font-size:12px; line-height:1.7; color:#334155; margin-bottom:10px;"></div>
       <div style="text-align:left;">
         <label style="font-size:10.5px; font-weight:700; color:#64748b;">Status</label>
         <select id="admFirmStatus" class="modal-input-field"><option value="trial">Trial</option><option value="active">Active (paid)</option><option value="blocked">Suspended</option></select>
@@ -1005,6 +1030,8 @@
         <div style="font-size:11px; color:#64748b; margin-bottom:6px;">Total collected so far: ₹<span id="admFirmPaid">0</span></div>
         <label style="font-size:10.5px; font-weight:700; color:#64748b;">Notes</label>
         <input type="text" id="admFirmNotes" class="modal-input-field" placeholder="Notes">
+        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Reset password (optional, min 6 characters)</label>
+        <input type="text" id="admFirmNewPass" class="modal-input-field" placeholder="New password for this firm" autocomplete="off">
       </div>
       <div class="modal-actions">
         <button class="modal-btn modal-cancel-btn" style="flex:1;" onclick="closeModal('admFirmModal')">Cancel</button>
@@ -1546,10 +1573,6 @@
           <span style="color:#64748b;">Update →</span>
         </div>
 
-        <div class="settings-item" onclick="openRecoveryPinModal()">
-          <span>🔑 Set / Change Recovery PIN</span>
-          <span style="color:#64748b;">Update →</span>
-        </div>
 
         <div class="settings-item" id="installSettingsItem" onclick="installFinTrack()">
           <span>📲 Install App (Add to Home Screen)</span>
@@ -1668,13 +1691,12 @@
         <div id="profAvatar" style="width:56px; height:56px; border-radius:50%; background:#1f5f4a; color:#fff; font-size:24px; font-weight:800; display:inline-flex; align-items:center; justify-content:center;">U</div>
       </div>
       <div style="font-size:12.5px; color:#334155; text-align:left; line-height:1.9; margin-bottom:12px;">
-        <div><b>Username:</b> <span id="profUsername">-</span></div>
+        <div><b>Login ID:</b> <span id="profUsername">-</span></div>
         <div><b>Role:</b> <span id="profRole">-</span></div>
         <div><b>Member since:</b> <span id="profSince">-</span></div>
       </div>
       <div class="settings-list" style="margin-bottom:12px;">
         <div class="settings-item" onclick="closeModal('profileModal'); openChangePasswordModal();"><span>🔒 Change Password</span><span style="color:#64748b;">Update →</span></div>
-        <div class="settings-item" onclick="closeModal('profileModal'); openRecoveryPinModal();"><span>🔑 Recovery PIN</span><span style="color:#64748b;">Update →</span></div>
         <div class="settings-item" onclick="closeModal('profileModal'); promptSimpleLogout();"><span>🚪 Logout</span><span style="color:#dc2626;">→</span></div>
       </div>
       <div class="modal-actions">
@@ -1776,30 +1798,12 @@
     </div>
   </div>
 
-  <!-- Set Recovery PIN Modal -->
-  <div class="modal-overlay" id="recoveryPinModal">
-    <div class="modal-box">
-      <h4 style="color:#2563eb;">Recovery PIN</h4>
-      <p style="font-size:11.5px; color:#64748b; margin-bottom:10px;">Set a 4-digit PIN. You need it if you forget your password.</p>
-      <input type="password" id="pinCurrentPasswordInput" class="modal-input-field" placeholder="Current Password" autocomplete="current-password">
-      <input type="tel" id="newRecoveryPinInput" inputmode="numeric" maxlength="4" autocomplete="off" class="modal-input-field" placeholder="New 4-Digit PIN">
-      <div class="modal-actions">
-        <button class="modal-btn modal-cancel-btn" onclick="closeModal('recoveryPinModal')">Cancel</button>
-        <button class="modal-btn modal-save-btn" id="pinSaveBtn" onclick="handleSetRecoveryPin()">Save PIN</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- PIN Reset Modal -->
   <div class="modal-overlay" id="forgotModal">
     <div class="modal-box">
-      <h3>Reset Password</h3>
-      <p style="font-size:11.5px; color:#64748b; margin-bottom:10px;">Enter your username, 4-Digit Recovery PIN, and new password.</p>
-      <input type="text" id="resetUsernameInput" class="modal-input-field" placeholder="Username">
-      <input type="tel" id="resetPinInput" inputmode="numeric" maxlength="4" autocomplete="off" class="modal-input-field" placeholder="4-Digit Recovery PIN">
-      <input type="password" id="resetNewPassInput" class="modal-input-field" placeholder="New Password">
-      <button class="fintrack-btn" id="resetPwdBtn" onclick="handleInstantPinPasswordReset()">Reset Password</button>
-      <div style="margin-top:10px;"><a onclick="closeModal('forgotModal')" style="font-size:11.5px; color:#64748b; cursor:pointer;">Cancel</a></div>
+      <h3>Forgot Password?</h3>
+      <p style="font-size:12px; color:#64748b; margin-bottom:10px; line-height:1.5;">Contact the Service admin. They will reset your password and tell you the new one. After login, change it from <b>More → Settings → Change Password</b>.</p>
+      <div id="forgotContact" style="font-size:13px; line-height:1.9; color:#0f172a; text-align:left; margin-bottom:12px;"></div>
+      <button class="fintrack-btn" onclick="closeModal('forgotModal')">OK</button>
     </div>
   </div>
 
@@ -1951,44 +1955,77 @@
     let fintrackAuthUser = null;
     let fintrackSaveTimer = null;
 
-    function fintrackEmail(u) {
+    // A real e-mail becomes an internal key (raj@gmail.com -> raj_at_gmail.com) so older username-based features keep working
+    function fintrackUserKey(u) {
       const v = String(u || "").trim().toLowerCase();
-      return v.includes('@') ? v : `${v}@fintrack.local`;   // admins can log in with a real email
+      return v.includes('@') && !v.endsWith('@fintrack.local') ? v.replace('@', '_at_') : v.replace('@fintrack.local', '');
     }
+    function fintrackEmail(u) { return `${fintrackUserKey(u)}@fintrack.local`; }
 
     // Names nobody may register with (admin accounts are created by the project owner only)
     function isReservedUsername(u) {
       const v = String(u || '').trim().toLowerCase();
       const flat = v.replace(/[\s._-]/g, '');
-      return v.includes('@') || /admin|superuser|root|softpilot|fintrack/.test(flat);
+      const local = flat.split('@')[0];
+      return /admin|superuser|root|softpilot|fintrack/.test(local);
     }
 
-    async function fintrackRegister(username, password, pin) {
-      if (isReservedUsername(username)) throw new Error('This username is reserved. Please choose another username.');
-      const cleanUser = String(username).trim().toLowerCase();
+    async function fintrackRegister(d) {
+      if (isReservedUsername(d.email)) throw new Error('This e-mail / username is reserved. Please use another.');
+      const key = fintrackUserKey(d.email);
       const { data, error } = await fintrackSupabase.auth.signUp({
-        email: fintrackEmail(cleanUser),
-        password: password,
-        options: { data: { username: cleanUser } }
+        email: `${key}@fintrack.local`,
+        password: d.password,
+        options: { data: { username: key, login_email: d.email.trim().toLowerCase(), firm_name: d.firm, business_type: d.type, owner_name: d.owner, mobile: d.mobile, address: d.address } }
       });
       if (error) throw error;
-      if (String(pin).trim()) {
-        const { error: pinErr } = await fintrackSupabase.rpc("set_recovery_pin", { p_pin: String(pin).trim() });
-        if (pinErr) showToast("Recovery PIN not saved: " + pinErr.message, "error");
-      }
       fintrackAuthUser = data.user || null;
       return data;
+    }
+
+    function showRegisterScreen(on) {
+      document.getElementById('register-screen-container').style.display = on ? 'block' : 'none';
+      document.getElementById('auth-screen-container').style.display = on ? 'none' : 'flex';
+      if (on) {
+        document.getElementById('register-screen-container').scrollTop = 0;
+        renderRegCompany();
+        loadCompanyProfile().then(renderRegCompany);
+      }
+    }
+
+    async function handleRegisterFirm() {
+      const v = id => document.getElementById(id).value.trim();
+      const d = { firm: '', type: '', owner: v('rfOwner'), mobile: v('rfMobile'), email: v('rfEmail').toLowerCase(), address: v('rfAddress'), password: document.getElementById('rfPassword').value };
+      if (!d.owner) return showToast('Enter your name', 'error');
+      if (!/^\d{10,15}$/.test(d.mobile.replace(/[\s+-]/g, ''))) return showToast('Enter a valid mobile number', 'error');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return showToast('Enter a valid e-mail', 'error');
+      if (d.password.length < 6) return showToast('Password must be at least 6 characters', 'error');
+      if (isReservedUsername(d.email)) return showToast('This e-mail is reserved. Use another e-mail.', 'error');
+      const btn = document.getElementById('rfSubmitBtn');
+      btn.disabled = true; btn.innerText = 'Creating...';
+      try {
+        await fintrackRegister(d);
+        showToast('Firm registered successfully!', 'success');
+        document.getElementById('register-screen-container').style.display = 'none';
+        await checkAuthSession();
+      } catch (e) {
+        showToast(e.message || 'Registration failed', 'error');
+      } finally {
+        btn.disabled = false; btn.innerText = 'Create firm and log in';
+      }
     }
 
     async function fintrackLogin(username, password) {
-      const cleanUser = String(username).trim().toLowerCase();
-      const { data, error } = await fintrackSupabase.auth.signInWithPassword({
-        email: fintrackEmail(cleanUser),
-        password: password
-      });
-      if (error) throw error;
-      fintrackAuthUser = data.user || null;
-      return data;
+      const raw = String(username).trim().toLowerCase();
+      let res = await fintrackSupabase.auth.signInWithPassword({ email: fintrackEmail(raw), password: password });
+      // accounts created directly in Supabase (e.g. the Super Admin) use the real e-mail
+      if (res.error && raw.includes('@') && !raw.endsWith('@fintrack.local')) {
+        const retry = await fintrackSupabase.auth.signInWithPassword({ email: raw, password: password });
+        if (!retry.error) res = retry;
+      }
+      if (res.error) throw res.error;
+      fintrackAuthUser = res.data.user || null;
+      return res.data;
     }
 
     // Optional columns: if one is not created in Supabase yet, the rest still saves and that data stays on this device.
@@ -2093,14 +2130,15 @@
         currentUser = { username: sessionUser.user_metadata?.username || sessionUser.email.split('@')[0] };
         localStorage.setItem('cashbook_active_user', JSON.stringify(currentUser));
 
-        document.getElementById('admin-login-container').style.display = 'none';
         if (isSuperAdmin()) {
+          document.getElementById('register-screen-container').style.display = 'none';
           document.getElementById('auth-screen-container').style.display = 'none';
           document.getElementById('main-app-content').style.display = 'none';
           document.getElementById('tenantLockScreen').style.display = 'none';
           showAdminApp();
           return;
         }
+        document.getElementById('register-screen-container').style.display = 'none';
         document.getElementById('admin-app').style.display = 'none';
         if (await showTenantLockIfNeeded()) {
           document.getElementById('auth-screen-container').style.display = 'none';
@@ -2121,7 +2159,7 @@
         document.getElementById('admin-app').style.display = 'none';
         document.getElementById('tenantLockScreen').style.display = 'none';
         document.getElementById('main-app-content').style.display = 'none';
-        showAdminLogin(location.hash === '#admin');
+        document.getElementById('auth-screen-container').style.display = 'flex';
       }
     }
 
@@ -3511,7 +3549,8 @@
     function openProfileModal() {
       const name = (currentUser && currentUser.username) || '-';
       document.getElementById('profAvatar').innerText = (name[0] || 'U').toUpperCase();
-      document.getElementById('profUsername').innerText = name;
+      const meta = (fintrackAuthUser && fintrackAuthUser.user_metadata) || {};
+      document.getElementById('profUsername').innerText = meta.login_email || name;
       document.getElementById('profRole').innerText = isSuperAdmin() ? 'Super Admin' : 'Tenant';
       const c = fintrackAuthUser && fintrackAuthUser.created_at;
       document.getElementById('profSince').innerText = c ? new Date(c).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
@@ -3608,29 +3647,6 @@
 
 
     /* ===== Service Admin console ===== */
-    function showAdminLogin(on) {
-      document.getElementById('admin-login-container').style.display = on ? 'flex' : 'none';
-      document.getElementById('auth-screen-container').style.display = on ? 'none' : 'flex';
-      if (on) { location.hash = 'admin'; } else if (location.hash === '#admin') { history.replaceState(null, '', location.pathname + location.search); }
-    }
-
-    async function adminLogin() {
-      const u = document.getElementById('admUsername').value.trim();
-      const p = document.getElementById('admPassword').value;
-      if (!u || !p) return showToast('Enter username and password', 'error');
-      try {
-        const data = await fintrackLogin(u, p);
-        const role = data && data.user && data.user.app_metadata && data.user.app_metadata.role;
-        if (role !== 'super_admin') {
-          await fintrackSupabase.auth.signOut();
-          fintrackAuthUser = null;
-          return showToast('This login is only for Service admins', 'error');
-        }
-        document.getElementById('admPassword').value = '';
-        await checkAuthSession();
-      } catch (e) { showToast(e.message || 'Login failed', 'error'); }
-    }
-
     let admFirms = [];
     let admCurrentFirm = null;
 
@@ -3673,6 +3689,7 @@
     const admFmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
     const admMoney = n => '₹ ' + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    const admName = f => f.firm_name || f.owner_name || f.username;
     const admLabel = { trial: 'Trial', active: 'Active', expired: 'Expired', blocked: 'Suspended' };
     let admPayments = [];
 
@@ -3711,11 +3728,11 @@
       const due = admFirms.filter(f => f.valid_until && f.status !== 'blocked' && new Date(f.valid_until) >= today && new Date(f.valid_until) <= limit)
         .sort((a, b) => a.valid_until.localeCompare(b.valid_until));
       document.getElementById('admDue').innerHTML = due.map(f =>
-        `<div class="adm-row"><div>${escHtml(String(f.username).toUpperCase())}</div><div style="text-align:right;"><span class="adm-pill ${admFirmState(f)}">${admLabel[admFirmState(f)]}</span><small>${admFmtDate(f.valid_until)}</small></div></div>`
+        `<div class="adm-row"><div>${escHtml(String(admName(f)).toUpperCase())}</div><div style="text-align:right;"><span class="adm-pill ${admFirmState(f)}">${admLabel[admFirmState(f)]}</span><small>${admFmtDate(f.valid_until)}</small></div></div>`
       ).join('') || '<div class="adm-row" style="color:#64748b; padding:16px 14px;">Nothing due.</div>';
 
       document.getElementById('admRecent').innerHTML = admFirms.slice(0, 5).map(f =>
-        `<div class="adm-row"><div>${escHtml(String(f.username).toUpperCase())}</div><div style="display:flex; align-items:center; gap:10px;"><span class="adm-pill ${admFirmState(f)}">${admLabel[admFirmState(f)]}</span><span style="color:#64748b; font-size:12.5px;">${admFmtDate(f.created_at)}</span></div></div>`
+        `<div class="adm-row"><div>${escHtml(String(admName(f)).toUpperCase())}</div><div style="display:flex; align-items:center; gap:10px;"><span class="adm-pill ${admFirmState(f)}">${admLabel[admFirmState(f)]}</span><span style="color:#64748b; font-size:12.5px;">${admFmtDate(f.created_at)}</span></div></div>`
       ).join('') || '<div class="adm-row">No firms yet</div>';
     }
 
@@ -3723,10 +3740,10 @@
       const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
       let rows;
       if (kind === 'firms') {
-        rows = [['Username', 'Status', 'Registered', 'Valid until', 'Amount paid', 'Notes']]
-          .concat(admFirms.map(f => [f.username, admLabel[admFirmState(f)], f.created_at, f.valid_until || '', f.amount_paid, f.notes || '']));
+        rows = [['Firm', 'Owner', 'Mobile', 'E-mail', 'Address', 'Business', 'Status', 'Registered', 'Valid until', 'Amount paid', 'Notes']]
+          .concat(admFirms.map(f => [admName(f), f.owner_name, f.mobile, f.email, f.address, f.business_type, admLabel[admFirmState(f)], f.created_at, f.valid_until || '', f.amount_paid, f.notes || '']));
       } else {
-        const name = id => (admFirms.find(f => f.user_id === id) || {}).username || id;
+        const name = id => { const f = admFirms.find(f => f.user_id === id); return f ? admName(f) : id; };
         rows = [['Firm', 'Amount', 'Paid on']].concat(admPayments.map(p => [name(p.user_id), p.amount, p.paid_at]));
       }
       const blob = new Blob([rows.map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv' });
@@ -3738,11 +3755,11 @@
 
     function admRenderFirms() {
       const q = (document.getElementById('admFirmSearch').value || '').trim().toLowerCase();
-      const list = admFirms.filter(f => !q || String(f.username).toLowerCase().includes(q));
+      const list = admFirms.filter(f => !q || [f.username, f.firm_name, f.owner_name, f.mobile, f.email].some(x => String(x || '').toLowerCase().includes(q)));
       document.getElementById('admFirmList').innerHTML = list.map(f => {
         const st = admFirmState(f);
         return `<div class="adm-row" style="cursor:pointer;" onclick="admOpenFirm('${f.user_id}')">
-          <div>${escHtml(f.username)}<small>Registered ${admFmtDate(f.created_at)} · Valid until ${f.valid_until ? admFmtDate(f.valid_until) : 'no expiry'}</small></div>
+          <div>${escHtml(admName(f))}<small>${escHtml([f.owner_name, f.mobile].filter(Boolean).join(' · '))}${f.owner_name || f.mobile ? '<br>' : ''}Registered ${admFmtDate(f.created_at)} · Valid until ${f.valid_until ? admFmtDate(f.valid_until) : 'no expiry'}</small></div>
           <span class="adm-pill ${st}">${admLabel[st]}</span></div>`;
       }).join('') || '<div class="adm-row">No firms found</div>';
     }
@@ -3751,12 +3768,14 @@
       const f = admFirms.find(x => x.user_id === id);
       if (!f) return;
       admCurrentFirm = f;
-      document.getElementById('admFirmTitle').innerText = f.username;
+      document.getElementById('admFirmTitle').innerText = admName(f);
+      document.getElementById('admFirmInfo').innerHTML = [['Owner', f.owner_name], ['Mobile', f.mobile], ['E-mail', f.email], ['Business', f.business_type], ['Address', f.address]].filter(x => x[1]).map(x => `<div><b>${x[0]}:</b> ${escHtml(x[1])}</div>`).join('');
       document.getElementById('admFirmStatus').value = f.status || 'trial';
       document.getElementById('admFirmUntil').value = f.valid_until || '';
       document.getElementById('admFirmPay').value = '';
       document.getElementById('admFirmPaid').innerText = Number(f.amount_paid) || 0;
       document.getElementById('admFirmNotes').value = f.notes || '';
+      document.getElementById('admFirmNewPass').value = '';
       document.getElementById('admFirmModal').style.display = 'flex';
     }
 
@@ -3776,8 +3795,16 @@
         const pe = await fintrackSupabase.from('tenant_payments').insert({ user_id: f.user_id, amount: add });
         if (pe.error) showToast('Saved, but payment log needs supabase_admin_payments.sql', 'error');
       }
+      const np = document.getElementById('admFirmNewPass').value.trim();
+      if (np) {
+        if (np.length < 6) return showToast('New password must be at least 6 characters', 'error');
+        const pr = await fintrackSupabase.rpc('admin_reset_password', { p_user_id: f.user_id, p_new_password: np });
+        if (pr.error) return showToast('Password reset failed: ' + pr.error.message, 'error');
+        showToast('Password reset. Tell the firm the new password.', 'success');
+      } else {
+        showToast('Firm updated', 'success');
+      }
       closeModal('admFirmModal');
-      showToast('Firm updated', 'success');
       admLoadFirms();
     }
 
@@ -3792,7 +3819,10 @@
     }
 
     async function admSetAdmin(username, make) {
-      const { error } = await fintrackSupabase.rpc('admin_set_admin', { p_username: username, p_make: make });
+      let { error } = await fintrackSupabase.rpc('admin_set_admin', { p_username: fintrackUserKey(username), p_make: make });
+      if (error && /not found/i.test(error.message) && String(username).includes('@')) {
+        ({ error } = await fintrackSupabase.rpc('admin_set_admin', { p_username: username, p_make: make }));
+      }
       if (error) return showToast(error.message, 'error');
       showToast(make ? 'Admin added. They must log in again.' : 'Admin removed', 'success');
       admLoadAdmins();
@@ -3994,105 +4024,34 @@
         btn.disabled = false; btn.innerText = 'Update Password';
       }
     }
-    function openForgotModal() { document.getElementById('forgotModal').style.display = 'flex'; }
-    async function handleInstantPinPasswordReset() {
-      const u = document.getElementById('resetUsernameInput').value.trim().toLowerCase();
-      const pin = document.getElementById('resetPinInput').value.trim();
-      const p = document.getElementById('resetNewPassInput').value.trim();
-      if (!u || !pin || !p) return showToast("Fill all fields", "error");
-      if (!/^\d{4}$/.test(pin)) return showToast("Recovery PIN must be exactly 4 digits", "error");
-      if (p.length < 6) return showToast("Password min 6 chars", "error");
-
-      const btn = document.getElementById('resetPwdBtn');
-      btn.disabled = true; btn.innerText = 'Resetting...';
-      try {
-        const { data: ok, error: rpcErr } = await fintrackSupabase.rpc("reset_password_with_pin", {
-          p_username: u, p_pin: pin, p_new_password: p
-        });
-        if (rpcErr) {
-          console.error("Reset error:", rpcErr);
-          return showToast("Reset failed: " + rpcErr.message, "error");
-        }
-        if (!ok) return showToast("Wrong username / PIN, no PIN set for this user, or locked after 5 wrong tries", "error");
-        closeModal('forgotModal');
-        document.getElementById('loginUsername').value = u;
-        document.getElementById('loginPassword').value = '';
-        ['resetUsernameInput', 'resetPinInput', 'resetNewPassInput'].forEach(id => document.getElementById(id).value = '');
-        showToast("Password reset done! Please login", "success");
-      } catch (e) {
-        console.error(e);
-        showToast("Network error, try again", "error");
-      } finally {
-        btn.disabled = false; btn.innerText = 'Reset Password';
-      }
+    function renderForgotContact() {
+      const p = companyProfile || {};
+      document.getElementById('forgotContact').innerHTML =
+        (p.phone ? `<div><b>Call / WhatsApp:</b> <a href="tel:${escHtml(p.phone)}" style="color:#2563eb; font-weight:700;">${escHtml(p.phone)}</a></div>` : '') +
+        (p.email ? `<div><b>Email:</b> <a href="mailto:${escHtml(p.email)}" style="color:#2563eb; font-weight:700; word-break:break-all;">${escHtml(p.email)}</a></div>` : '') +
+        ((p.phone || p.email) ? '' : '<div style="color:#94a3b8;">Contact details are not added yet.</div>');
     }
-
-    /* Set / change Recovery PIN (for logged-in users) */
-    function openRecoveryPinModal() {
-      document.getElementById('pinCurrentPasswordInput').value = '';
-      document.getElementById('newRecoveryPinInput').value = '';
-      document.getElementById('recoveryPinModal').style.display = 'flex';
-    }
-    async function handleSetRecoveryPin() {
-      const cur = document.getElementById('pinCurrentPasswordInput').value.trim();
-      const pin = document.getElementById('newRecoveryPinInput').value.trim();
-      if (!cur) return showToast("Enter current password", "error");
-      if (!/^\d{4}$/.test(pin)) return showToast("Recovery PIN must be exactly 4 digits", "error");
-
-      const btn = document.getElementById('pinSaveBtn');
-      btn.disabled = true; btn.innerText = 'Saving...';
-      try {
-        if (!(await reauthCurrentUser(cur))) return;
-        const { error } = await fintrackSupabase.rpc("set_recovery_pin", { p_pin: pin });
-        if (error) {
-          console.error("Set PIN error:", error);
-          return showToast("PIN not saved: " + error.message, "error");
-        }
-        closeModal('recoveryPinModal');
-        showToast("Recovery PIN saved", "success");
-      } catch (e) {
-        console.error(e);
-        showToast("Network error, try again", "error");
-      } finally {
-        btn.disabled = false; btn.innerText = 'Save PIN';
-      }
+    function openForgotModal() {
+      renderForgotContact();
+      document.getElementById('forgotModal').style.display = 'flex';
+      loadCompanyProfile().then(renderForgotContact);
     }
 
     /* Auth Submit */
     async function handleAuthSubmit() {
       const u = document.getElementById('loginUsername').value.trim();
       const p = document.getElementById('loginPassword').value.trim();
-      const pin = document.getElementById('userRecoveryPin').value.trim();
       if (!u || !p) return showToast("Fill all credentials", "error");
-      if (authMode === 'register' && isReservedUsername(u)) return showToast("This username is reserved. Choose another username.", "error");
-      if (authMode === 'register' && !/^\d{4}$/.test(pin)) return showToast("Enter a 4-digit Recovery PIN (needed for password reset)", "error");
 
       try {
-        if (authMode === 'register') {
-          await fintrackRegister(u, p, pin);
-          showToast("Registered successfully!", "success");
-        } else {
-          await fintrackLogin(u, p);
-          showToast("Welcome back!", "success");
-        }
+        await fintrackLogin(u, p);
+        showToast("Welcome back!", "success");
         await checkAuthSession();
       } catch(e) {
         showToast(e.message || "Auth error", "error");
       }
     }
-    function toggleAuthModeView() {
-      authMode = authMode === 'login' ? 'register' : 'login';
-      document.getElementById('authTitle').innerText = 'FinTrack';
-      document.getElementById('authSubtitle').innerText = authMode === 'register' ? 'Create an Account' : 'Please Login';
-      document.getElementById('authSubmitBtn').innerText = authMode === 'register' ? 'Register' : 'Login';
-      document.getElementById('pinInputGroup').style.display = authMode === 'register' ? 'block' : 'none';
-      document.getElementById('authModeToggleLink').innerText = authMode === 'register' ? 'Have account? Login' : 'Register';
-      document.getElementById('regCompanyBox').style.display = authMode === 'register' ? 'block' : 'none';
-      if (authMode === 'register') {
-        renderRegCompany();
-        loadCompanyProfile().then(renderRegCompany);
-      }
-    }
+    function toggleAuthModeView() { showRegisterScreen(true); }
 
     function renderRegCompany() {
       const p = companyProfile || {};
