@@ -423,6 +423,7 @@
     .rf-btn:disabled { opacity: .6; }
     .rf-foot { text-align: center; margin-top: 10px; font-size: 14px; color: #374151; }
     .rf-foot a { color: #1e3a5f; text-decoration: underline; cursor: pointer; }
+    body.app-locked > *:not(#tenantLockScreen):not(#fintrack-toast) { display: none !important; }
     #admin-app, #tenantLockScreen { display: none; position: fixed; inset: 0; font-family: inherit; }
     #tenantLockScreen { z-index: 100003; background: #0f172a; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
     #admin-app { z-index: 100002; background: #f1f5f9; }
@@ -941,7 +942,7 @@
       <h1 id="lockTitle">Account locked</h1>
       <div class="adm-sub" id="lockMsg"></div>
       <div id="lockCompany" style="font-size:12.5px; line-height:1.8; color:#0f172a; margin-bottom:12px;"></div>
-      <button class="adm-btn" style="width:100%; background:#b91c1c;" onclick="promptSimpleLogout()">Log out</button>
+      <button class="adm-btn" style="width:100%; background:#b91c1c;" onclick="executeConfirmedLogout()">Log out</button>
     </div>
   </div>
 
@@ -1025,6 +1026,8 @@
         <select id="admFirmStatus" class="modal-input-field"><option value="trial">Trial</option><option value="active">Active (paid)</option><option value="blocked">Suspended</option></select>
         <label style="font-size:10.5px; font-weight:700; color:#64748b;">Valid until (leave empty = no expiry)</label>
         <input type="date" id="admFirmUntil" class="modal-input-field">
+        <label style="font-size:10.5px; font-weight:700; color:#64748b;">Or give days from today (overrides the date)</label>
+        <input type="number" id="admFirmDays" class="modal-input-field" inputmode="numeric" min="0" placeholder="e.g. 15 or 365">
         <label style="font-size:10.5px; font-weight:700; color:#64748b;">Payment received now (₹, optional)</label>
         <input type="number" id="admFirmPay" class="modal-input-field" inputmode="decimal" placeholder="0">
         <div style="font-size:11px; color:#64748b; margin-bottom:6px;">Total collected so far: ₹<span id="admFirmPaid">0</span></div>
@@ -1074,6 +1077,11 @@
 
     <!-- 1. DASHBOARD VIEW -->
     <div id="dashboard-section" class="app-screen-section">
+      <!-- Trial / subscription banner -->
+      <div id="trialBanner" style="display:none; margin-bottom:10px; padding:10px 12px; border-radius:12px; align-items:center; justify-content:space-between; gap:10px;">
+        <div id="trialBannerText" style="font-size:12.5px; font-weight:700; line-height:1.4;"></div>
+        <button onclick="openPayInfo()" style="flex-shrink:0; border:none; border-radius:8px; padding:8px 12px; font-size:12px; font-weight:800; cursor:pointer; background:#1f2937; color:#fff; font-family:inherit;">Pay now</button>
+      </div>
       <!-- Hero Greeting Card -->
       <div class="hero-banner-card">
         <div class="hero-top-row">
@@ -1717,6 +1725,10 @@
         <input type="tel" id="cpPhone" class="modal-input-field" placeholder="Contact number">
         <label style="font-size:10.5px; font-weight:700; color:#64748b;">UPI ID</label>
         <input type="text" id="cpUpiId" class="modal-input-field" placeholder="name@upi">
+        <div id="cpTrialWrap" style="display:none;">
+          <label style="font-size:10.5px; font-weight:700; color:#64748b;">Free trial days for new firms</label>
+          <input type="number" id="cpTrialDays" class="modal-input-field" inputmode="numeric" min="0" placeholder="15">
+        </div>
         <label style="font-size:10.5px; font-weight:700; color:#64748b;">UPI Scanner (QR)</label>
         <div style="text-align:center; margin:6px 0;">
           <img id="cpQrImg" alt="UPI QR" style="display:none; max-width:200px; width:100%; border:1px solid #e2e8f0; border-radius:10px; padding:6px; background:#fff;">
@@ -1732,6 +1744,16 @@
         <button class="modal-btn modal-cancel-btn" style="flex:1;" onclick="closeModal('companyModal')">Close</button>
         <button class="modal-btn" id="cpSaveBtn" style="flex:1; display:none; background:#1f5f4a; color:#fff;" onclick="saveCompanyProfile()">Save</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Pay info modal -->
+  <div class="modal-overlay" id="payInfoModal">
+    <div class="modal-box">
+      <h4>Pay to continue</h4>
+      <div id="payInfoSub" style="font-size:12px; color:#64748b; margin-bottom:8px;"></div>
+      <div id="payInfoBody" style="font-size:12.5px; line-height:1.9; color:#0f172a; text-align:left; margin-bottom:12px;"></div>
+      <div class="modal-actions"><button class="modal-btn modal-cancel-btn" style="flex:1;" onclick="closeModal('payInfoModal')">Close</button></div>
     </div>
   </div>
 
@@ -2146,7 +2168,8 @@
           return;
         }
         document.getElementById('tenantLockScreen').style.display = 'none';
-        
+        renderTrialBanner();
+        startTenantWatch();
         document.getElementById('auth-screen-container').style.display = 'none';
         document.getElementById('main-app-content').style.display = 'block';
         document.getElementById('currentUserNameLabel').innerText = currentUser.username;
@@ -2156,6 +2179,8 @@
         initUserData();
         await loadFromSupabase();
       } else {
+        document.body.classList.remove('app-locked');
+        tenantInfo = null;
         document.getElementById('admin-app').style.display = 'none';
         document.getElementById('tenantLockScreen').style.display = 'none';
         document.getElementById('main-app-content').style.display = 'none';
@@ -3569,6 +3594,8 @@
       img.style.display = has ? 'inline-block' : 'none';
       document.getElementById('cpQrEmpty').style.display = has ? 'none' : 'block';
       document.getElementById('cpAdminOnly').style.display = admin ? 'block' : 'none';
+      document.getElementById('cpTrialWrap').style.display = admin ? 'block' : 'none';
+      document.getElementById('cpTrialDays').value = companyProfile.trial_days == null ? '' : companyProfile.trial_days;
       document.getElementById('cpSaveBtn').style.display = admin ? 'block' : 'none';
       const badge = document.getElementById('cpBadge');
       badge.innerText = admin ? '✏️ Super Admin: you can edit these details' : '🔒 View only. Use these details to pay the registration amount.';
@@ -3581,7 +3608,7 @@
         const { data, error } = await fintrackSupabase.from('company_profile').select('*').eq('id', 1).maybeSingle();
         if (error) return { ok: false, error };
         if (data) {
-          companyProfile = { email: data.email || '', phone: data.phone || '', upi_id: data.upi_id || '', upi_qr: data.upi_qr || '' };
+          companyProfile = { email: data.email || '', phone: data.phone || '', upi_id: data.upi_id || '', upi_qr: data.upi_qr || '', trial_days: data.trial_days };
           localStorage.setItem('fintrack_company_profile', JSON.stringify(companyProfile));
         }
         return { ok: true };
@@ -3618,6 +3645,7 @@
           companyProfile.email = document.getElementById('cpEmail').value;
           companyProfile.phone = document.getElementById('cpPhone').value;
           companyProfile.upi_id = document.getElementById('cpUpiId').value;
+          companyProfile.trial_days = document.getElementById('cpTrialDays').value;
           companyProfile.upi_qr = c.toDataURL('image/png');
           renderCompanyModal();
         };
@@ -3637,9 +3665,16 @@
         upi_qr: companyProfile.upi_qr || '',
         updated_at: new Date().toISOString()
       };
-      const { error } = await fintrackSupabase.from('company_profile').upsert(row, { onConflict: 'id' });
+      const td = document.getElementById('cpTrialDays').value.trim();
+      let withDays = td !== '' ? Object.assign({}, row, { trial_days: Math.max(0, parseInt(td, 10) || 0) }) : row;
+      let { error } = await fintrackSupabase.from('company_profile').upsert(withDays, { onConflict: 'id' });
+      if (error && withDays !== row && /trial_days/i.test(error.message)) {
+        ({ error } = await fintrackSupabase.from('company_profile').upsert(row, { onConflict: 'id' }));
+        if (!error) showToast('Saved, but trial days need supabase_trial.sql', 'error');
+        withDays = row;
+      }
       if (error) return showToast('Save failed: ' + error.message, 'error');
-      companyProfile = { email: row.email, phone: row.phone, upi_id: row.upi_id, upi_qr: row.upi_qr };
+      companyProfile = { email: row.email, phone: row.phone, upi_id: row.upi_id, upi_qr: row.upi_qr, trial_days: withDays.trial_days };
       localStorage.setItem('fintrack_company_profile', JSON.stringify(companyProfile));
       closeModal('companyModal');
       showToast('Company profile saved', 'success');
@@ -3680,10 +3715,17 @@
       if (page === 'company') admRenderCompany();
     }
 
+    function todayIso(offsetDays = 0) {
+      const d = new Date(); d.setDate(d.getDate() + offsetDays);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function daysLeft(iso) {
+      if (!iso) return null;
+      return Math.round((new Date(iso + 'T00:00:00') - new Date(todayIso() + 'T00:00:00')) / 86400000);
+    }
     function admFirmState(f) {
-      const today = new Date().toISOString().slice(0, 10);
       if (f.status === 'blocked') return 'blocked';
-      if (f.valid_until && f.valid_until < today) return 'expired';
+      if (f.valid_until && f.valid_until < todayIso()) return 'expired';
       return f.status === 'active' ? 'active' : 'trial';
     }
     const admFmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
@@ -3759,7 +3801,7 @@
       document.getElementById('admFirmList').innerHTML = list.map(f => {
         const st = admFirmState(f);
         return `<div class="adm-row" style="cursor:pointer;" onclick="admOpenFirm('${f.user_id}')">
-          <div>${escHtml(admName(f))}<small>${escHtml([f.owner_name, f.mobile].filter(Boolean).join(' · '))}${f.owner_name || f.mobile ? '<br>' : ''}Registered ${admFmtDate(f.created_at)} · Valid until ${f.valid_until ? admFmtDate(f.valid_until) : 'no expiry'}</small></div>
+          <div>${escHtml(admName(f))}<small>${escHtml([f.owner_name, f.mobile].filter(Boolean).join(' · '))}${f.owner_name || f.mobile ? '<br>' : ''}Registered ${admFmtDate(f.created_at)} · ${f.valid_until ? 'Valid until ' + admFmtDate(f.valid_until) + ' (' + (daysLeft(f.valid_until) >= 0 ? daysLeft(f.valid_until) + ' days left' : 'ended') + ')' : 'No expiry'}</small></div>
           <span class="adm-pill ${st}">${admLabel[st]}</span></div>`;
       }).join('') || '<div class="adm-row">No firms found</div>';
     }
@@ -3773,6 +3815,7 @@
       document.getElementById('admFirmStatus').value = f.status || 'trial';
       document.getElementById('admFirmUntil').value = f.valid_until || '';
       document.getElementById('admFirmPay').value = '';
+      document.getElementById('admFirmDays').value = '';
       document.getElementById('admFirmPaid').innerText = Number(f.amount_paid) || 0;
       document.getElementById('admFirmNotes').value = f.notes || '';
       document.getElementById('admFirmNewPass').value = '';
@@ -3785,7 +3828,7 @@
       const add = parseFloat(document.getElementById('admFirmPay').value) || 0;
       const upd = {
         status: document.getElementById('admFirmStatus').value,
-        valid_until: document.getElementById('admFirmUntil').value || null,
+        valid_until: (parseInt(document.getElementById('admFirmDays').value, 10) > 0) ? todayIso(parseInt(document.getElementById('admFirmDays').value, 10)) : (document.getElementById('admFirmUntil').value || null),
         amount_paid: (Number(f.amount_paid) || 0) + add,
         notes: document.getElementById('admFirmNotes').value.trim()
       };
@@ -3843,27 +3886,95 @@
         (p.upi_qr ? `<img src="${p.upi_qr}" style="max-width:160px; margin-top:6px; border:1px solid #e2e8f0; border-radius:10px; padding:5px;">` : '<div style="color:#94a3b8;">No QR added</div>');
     }
 
-    /* Tenant lock: blocked or expired accounts see payment details only */
-    async function showTenantLockIfNeeded() {
+    /* Tenant lock: blocked or expired accounts see payment details only; nothing else is usable */
+    let tenantInfo = null;
+
+    function paymentInfoHtml(p) {
+      p = p || {};
+      return (p.upi_qr ? `<div style="text-align:center;"><img src="${p.upi_qr}" style="max-width:170px; width:100%; border:1px solid #e2e8f0; border-radius:10px; padding:5px;"></div>` : '') +
+        (p.upi_id ? `<div><b>UPI ID:</b> ${escHtml(p.upi_id)}</div>` : '') +
+        (p.phone ? `<div><b>Contact:</b> <a href="tel:${escHtml(p.phone)}" style="color:#2563eb; font-weight:700;">${escHtml(p.phone)}</a></div>` : '') +
+        (p.email ? `<div><b>Email:</b> <a href="mailto:${escHtml(p.email)}" style="color:#2563eb; font-weight:700; word-break:break-all;">${escHtml(p.email)}</a></div>` : '') ||
+        '<div style="color:#94a3b8;">Payment details are not added yet. Please contact the Service admin.</div>';
+    }
+
+    async function fetchTenantRow() {
+      const key = 'fintrack_lock_cache';
       try {
         const { data, error } = await fintrackSupabase.from('tenant_registry').select('status,valid_until').eq('user_id', fintrackAuthUser.id).maybeSingle();
-        if (error || !data) return false;               // table missing or no row: do not lock
-        const st = admFirmState(data);
-        if (st !== 'blocked' && st !== 'expired') return false;
-        await loadCompanyProfile();
-        const p = companyProfile || {};
-        document.getElementById('lockTitle').innerText = st === 'blocked' ? 'Account suspended' : 'Subscription ended';
-        document.getElementById('lockMsg').innerText = st === 'blocked'
-          ? 'Your account is suspended. Please contact us.'
-          : 'Your trial / subscription has ended. Pay the amount below and contact us to continue.';
-        document.getElementById('lockCompany').innerHTML =
-          (p.upi_qr ? `<div style="text-align:center;"><img src="${p.upi_qr}" style="max-width:170px; width:100%; border:1px solid #e2e8f0; border-radius:10px; padding:5px;"></div>` : '') +
-          (p.upi_id ? `<div><b>UPI ID:</b> ${escHtml(p.upi_id)}</div>` : '') +
-          (p.phone ? `<div><b>Contact:</b> <a href="tel:${escHtml(p.phone)}">${escHtml(p.phone)}</a></div>` : '') +
-          (p.email ? `<div><b>Email:</b> <a href="mailto:${escHtml(p.email)}">${escHtml(p.email)}</a></div>` : '');
-        document.getElementById('tenantLockScreen').style.display = 'flex';
-        return true;
-      } catch (e) { return false; }
+        if (error) throw error;
+        if (data) localStorage.setItem(key, JSON.stringify(Object.assign({ uid: fintrackAuthUser.id }, data)));
+        return data || null;
+      } catch (e) {
+        // offline or table missing: fall back to the last known status so an expired firm cannot work offline
+        try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && c.uid === fintrackAuthUser.id) return c; } catch (e2) {}
+        return null;
+      }
+    }
+
+    async function showTenantLockIfNeeded() {
+      const row = await fetchTenantRow();
+      tenantInfo = row;
+      const st = row ? admFirmState(row) : 'active';
+      if (st !== 'blocked' && st !== 'expired') {
+        document.body.classList.remove('app-locked');
+        return false;
+      }
+      await loadCompanyProfile();
+      document.getElementById('lockTitle').innerText = st === 'blocked' ? 'Account suspended' : (row.status === 'trial' ? 'Your free trial has ended' : 'Subscription ended');
+      document.getElementById('lockMsg').innerText = st === 'blocked'
+        ? 'Your account is suspended. Please contact us.'
+        : 'Please make the payment using the details below and contact us to continue. Your data is safe.';
+      document.getElementById('lockCompany').innerHTML = paymentInfoHtml(companyProfile);
+      document.body.classList.add('app-locked');
+      document.getElementById('main-app-content').style.display = 'none';
+      document.getElementById('tenantLockScreen').style.display = 'flex';
+      return true;
+    }
+
+    function renderTrialBanner() {
+      const box = document.getElementById('trialBanner');
+      const r = tenantInfo;
+      box.style.display = 'none';
+      if (!r || !r.valid_until || r.status === 'blocked') return;
+      const dl = daysLeft(r.valid_until);
+      if (dl == null || dl < 0) return;
+      const when = admFmtDate(r.valid_until);
+      let text;
+      if (r.status === 'trial') {
+        text = dl === 0 ? 'Your free trial ends today. Please pay to continue.'
+          : `Your free trial ends in ${dl} day${dl === 1 ? '' : 's'} (${when}). Please make the payment to continue.`;
+      } else if (dl <= 15) {
+        text = dl === 0 ? 'Your subscription ends today. Please renew.' : `Your subscription ends in ${dl} day${dl === 1 ? '' : 's'} (${when}). Please renew to continue.`;
+      } else return;
+      const tone = dl <= 2 ? ['#fee2e2', '#b91c1c'] : dl <= 7 ? ['#fef3c7', '#b45309'] : ['#e3edf9', '#1e4a8a'];
+      box.style.background = tone[0]; box.style.color = tone[1];
+      document.getElementById('trialBannerText').innerText = text;
+      box.style.display = 'flex';
+    }
+
+    async function openPayInfo() {
+      const r = tenantInfo;
+      const dl = r && r.valid_until ? daysLeft(r.valid_until) : null;
+      document.getElementById('payInfoSub').innerText = dl != null && dl >= 0 ? `Valid until ${admFmtDate(r.valid_until)} (${dl} day${dl === 1 ? '' : 's'} left)` : '';
+      document.getElementById('payInfoBody').innerHTML = paymentInfoHtml(companyProfile);
+      document.getElementById('payInfoModal').style.display = 'flex';
+      await loadCompanyProfile();
+      document.getElementById('payInfoBody').innerHTML = paymentInfoHtml(companyProfile);
+    }
+
+    // Re-check while the app is open (tab kept open, phone resumed, back online) so an expiry takes effect straight away
+    let tenantWatchStarted = false;
+    async function recheckTenant() {
+      if (!fintrackAuthUser || isSuperAdmin()) return;
+      if (!(await showTenantLockIfNeeded())) renderTrialBanner();
+    }
+    function startTenantWatch() {
+      if (tenantWatchStarted) return;
+      tenantWatchStarted = true;
+      setInterval(recheckTenant, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) recheckTenant(); });
+      window.addEventListener('online', recheckTenant);
     }
 
     document.addEventListener('keydown', function (e) {
