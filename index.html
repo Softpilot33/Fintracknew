@@ -1346,17 +1346,16 @@
           <table>
             <thead>
               <tr>
-                <th style="width: 20%;">Date</th>
-                <th style="width: 32%;">Particular</th>
-                <th style="width: 16%;">Mode</th>
-                <th style="width: 20%;">Amount</th>
+                <th style="width: 26%;">Date</th>
+                <th style="width: 40%;">Particular</th>
+                <th style="width: 22%;">Amount</th>
                 <th style="width: 12%;"></th>
               </tr>
             </thead>
             <tbody id="incTableBody"></tbody>
             <tfoot>
               <tr class="total-row">
-                <td colspan="3" class="num">Total Income</td>
+                <td colspan="2" class="num">Total Income</td>
                 <td id="totalIncome" class="num">0</td>
                 <td></td>
               </tr>
@@ -1372,17 +1371,16 @@
           <table>
             <thead>
               <tr>
-                <th style="width: 20%;">Date</th>
-                <th style="width: 32%;">Particular</th>
-                <th style="width: 16%;">Mode</th>
-                <th style="width: 20%;">Amount</th>
+                <th style="width: 26%;">Date</th>
+                <th style="width: 40%;">Particular</th>
+                <th style="width: 22%;">Amount</th>
                 <th style="width: 12%;"></th>
               </tr>
             </thead>
             <tbody id="expTableBody"></tbody>
             <tfoot>
               <tr class="total-row">
-                <td colspan="3" class="num">Total Expense</td>
+                <td colspan="2" class="num">Total Expense</td>
                 <td id="totalExp" class="num exp-num">0</td>
                 <td></td>
               </tr>
@@ -2724,14 +2722,14 @@
 
         if (inc !== 0) {
           const tr = document.createElement('tr');
-          tr.innerHTML = `${dateTd}${partTd}${modeCell(row, i)}
+          tr.innerHTML = `${dateTd}${partTd}
             <td><input type="number" inputmode="numeric" class="num" value="${inc}" placeholder="0" oninput="sheets[currentSheetIndex].rows[${i}].income=parseFloat(this.value)||0;saveAllData();calculateCashTotals();"></td>
             <td style="white-space:nowrap;"><button class="action-btn" title="Edit" onclick="openEditCashRow(${i}, 'income')">✎</button> <button class="action-btn" onclick="deleteCashEntry(${i}, 'income')">✕</button></td>`;
           incBody.appendChild(tr);
         }
         if (exp !== 0) {
           const tr = document.createElement('tr');
-          tr.innerHTML = `${dateTd}${partTd}${modeCell(row, i)}
+          tr.innerHTML = `${dateTd}${partTd}
             <td><input type="number" inputmode="numeric" class="num exp-num" value="${exp}" placeholder="0" oninput="sheets[currentSheetIndex].rows[${i}].exp=parseFloat(this.value)||0;saveAllData();calculateCashTotals();"></td>
             <td style="white-space:nowrap;"><button class="action-btn" title="Edit" onclick="openEditCashRow(${i}, 'expense')">✎</button> <button class="action-btn" onclick="deleteCashEntry(${i}, 'expense')">✕</button></td>`;
           expBody.appendChild(tr);
