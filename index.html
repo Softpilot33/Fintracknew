@@ -905,6 +905,24 @@
     @media (min-width: 1400px) {
       .app-screen-section { max-width: 1400px; }
     }
+
+    /* Reports hub (landing list) */
+    #ledger-section.hub-mode { background: transparent; border: 0; box-shadow: none; padding: 0 4px; }
+    .rh-title { font-size: 22px; font-weight: 800; color: #0f1f1a; margin-top: 6px; }
+    .rh-sub { font-size: 13px; color: #64748b; margin: 2px 0 14px; }
+    .rh-search { position: relative; margin-bottom: 14px; }
+    .rh-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #7b8794; }
+    .rh-search input { width: 100%; height: 44px; padding: 0 12px 0 36px; border: 1px solid #cfd8d3; border-radius: 8px; background: #fff; font-size: 14px; outline: none; }
+    .rh-search input:focus { border-color: #1f5f4a; }
+    .rh-gl { font-size: 12.5px; font-weight: 700; color: #475569; margin: 16px 2px 6px; }
+    .rh-card { background: #fff; border: 1px solid #e2e8e4; border-radius: 12px; overflow: hidden; }
+    .rh-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-top: 1px solid #e8eeea; cursor: pointer; }
+    .rh-item:first-child { border-top: 0; }
+    .rh-item:hover, .rh-item:active { background: #f6faf8; }
+    .rh-it { font-size: 14px; font-weight: 700; color: #111827; }
+    .rh-id { font-size: 12.5px; color: #7b8794; margin-top: 2px; }
+    .rh-item svg { width: 16px; height: 16px; flex: none; color: #7b8794; }
+    .rh-empty { padding: 18px; text-align: center; color: #7b8794; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -1538,13 +1556,29 @@
 
     <!-- 3. REPORTS MODULE -->
     <div id="ledger-section" class="app-screen-section sheet-container" style="display:none;">
-      <h3 style="margin-bottom: 10px; font-size: 15px; font-weight:800;">Statement & Reports Center</h3>
+      <div id="reportsHub">
+        <div class="rh-title">Reports</div>
+        <div class="rh-sub">Pick a report, then choose the period.</div>
+        <div class="rh-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg>
+          <input type="text" id="reportsHubSearch" placeholder="Search reports" oninput="renderReportsHub()">
+        </div>
+        <div id="reportsHubList"></div>
+      </div>
+      <div id="reportDetail" style="display:none;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <button type="button" class="add-row-btn" onclick="showReportsHub()">&larr; Reports</button>
+        <h3 id="reportDetailTitle" style="font-size: 15px; font-weight:800;">Statement &amp; Reports Center</h3>
+      </div>
       
       <div class="filter-box">
         <div class="filter-group">
           <label>Report Type:</label>
           <select id="reportTypeSelect" onchange="handleReportTypeChange()">
             <option value="ledger">Account / Party Ledger</option>
+            <option value="daybook">Day Book</option>
+            <option value="groupsummary">Group Summary</option>
+            <option value="groupbalance">Group Balances as on a Date</option>
             <option value="daywise">Day-wise Summary</option>
             <option value="monthwise">Month-wise Summary</option>
             <option value="yearwise">Year-wise Summary</option>
@@ -1560,6 +1594,11 @@
           <select id="ledgerAccountSelect" onchange="renderActiveReport()">
             <option value="ALL">-- All Recorded Parties --</option>
           </select>
+        </div>
+
+        <div class="filter-group" id="groupFilterGroup" style="display:none;">
+          <label>Account Group:</label>
+          <select id="reportGroupSelect" onchange="renderActiveReport()"></select>
         </div>
 
         <div class="filter-group" id="searchFilterGroup">
@@ -1606,6 +1645,7 @@
         </table>
       </div>
       <div id="finalReportBox" style="display:none;"></div>
+      </div>
     </div>
 
     <!-- 3B. CUSTOMERS MODULE -->
@@ -3352,7 +3392,7 @@
       if (section === 'customers') renderCustomers();
       if (section === 'acgroups') renderAccountGroups();
       if (section === 'accounts') renderAccountMaster();
-      if (section === 'reports') { populateLedgerAccounts(); renderActiveReport(); }
+      if (section === 'reports') { populateLedgerAccounts(); showReportsHub(); }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -3438,7 +3478,7 @@
       const { from, to } = getReportRange();
       const dmy = d => d ? d.split('-').reverse().join('-') : '';
       if (!from && !to) { el.innerText = 'Showing: All dates'; return; }
-      const asOn = ['trialbalance', 'balancesheet'].includes(type);
+      const asOn = ['trialbalance', 'balancesheet', 'groupbalance'].includes(type);
       el.innerText = asOn
         ? `As on ${to ? dmy(to) : 'latest'} (all entries up to this date)`
         : `Period: ${from ? dmy(from) : 'start'} to ${to ? dmy(to) : 'latest'}`;
@@ -3447,17 +3487,20 @@
     function handleReportTypeChange() {
       const type = document.getElementById('reportTypeSelect').value;
       document.getElementById('accountFilterGroup').style.display = type === 'ledger' ? 'flex' : 'none';
-      document.getElementById('searchFilterGroup').style.display = type === 'ledger' ? 'flex' : 'none';
+      document.getElementById('searchFilterGroup').style.display = (type === 'ledger' || type === 'daybook') ? 'flex' : 'none';
+      document.getElementById('groupFilterGroup').style.display = (type === 'groupsummary' || type === 'groupbalance') ? 'flex' : 'none';
+      document.getElementById('dateFromGroup').style.display = type === 'groupbalance' ? 'none' : '';
+      if (type === 'groupsummary' || type === 'groupbalance') populateReportGroups();
       renderActiveReport();
     }
 
     function renderActiveReport() {
       const type = document.getElementById('reportTypeSelect').value;
-      const isFinal = ['receiptpayment','trialbalance','profitloss','balancesheet'].includes(type);
+      const isFinal = ['receiptpayment','trialbalance','profitloss','balancesheet','groupsummary','groupbalance'].includes(type);
       updatePeriodLabel(type);
       document.querySelector('#ledger-section .table-scroll').style.display = isFinal ? 'none' : '';
       document.getElementById('finalReportBox').style.display = isFinal ? 'block' : 'none';
-      if (isFinal) { renderFinalReport(type); return; }
+      if (isFinal) { if (type === 'groupsummary' || type === 'groupbalance') renderGroupReport(type); else renderFinalReport(type); return; }
       const account = document.getElementById('ledgerAccountSelect').value;
       const search = document.getElementById('reportSearchInput').value.toLowerCase();
       const thead = document.getElementById('reportTableHead');
@@ -3501,7 +3544,7 @@
 
       let totalIn = 0, totalOut = 0;
 
-      if (type === 'ledger') {
+      if (type === 'ledger' || type === 'daybook') {
         thead.innerHTML = `
           <tr>
             <th style="width:20%;">Date</th>
@@ -3509,10 +3552,11 @@
             <th style="width:26%;">Particular</th>
             <th style="width:16%;" class="num">Income / In</th>
             <th style="width:16%;" class="num exp-num">Exp / Out</th>
+            <th style="width:16%;" class="num">Balance</th>
           </tr>
         `;
 
-        let filtered = entries;
+        let filtered = entries.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
         if (account !== 'ALL') {
           filtered = filtered.filter(e => (e.particular || '').toLowerCase() === account.toLowerCase());
         }
@@ -3530,6 +3574,7 @@
             <td>${e.particular}</td>
             <td class="num">${e.inc.toLocaleString()}</td>
             <td class="num exp-num">${e.exp.toLocaleString()}</td>
+            <td class="num">${(totalIn - totalOut).toLocaleString()}</td>
           `;
           tbody.appendChild(tr);
         });
@@ -3608,6 +3653,117 @@
         document.getElementById('ledgerFilterOut').innerText = totalOut.toLocaleString();
         document.getElementById('ledgerFilterBalance').innerText = `₹${(totalIn - totalOut).toLocaleString()}`;
       }
+    }
+
+
+    /* Reports hub: landing list, opens the report screen */
+    const REPORT_HUB = [
+      { group: 'Daily', items: [
+        { type: 'daybook', title: 'Day book', desc: 'Every receipt and payment against cash for a period.' } ] },
+      { group: 'Accounts', items: [
+        { type: 'ledger', title: 'Account ledger', desc: 'All entries of one account with running balance.' },
+        { type: 'groupsummary', title: 'Group summary', desc: 'Opening, debits, credits and closing for every account in a group.' },
+        { type: 'groupbalance', title: 'Group balances as on a date', desc: 'Closing balance of every account in a group on one day.' } ] },
+      { group: 'Final accounts', items: [
+        { type: 'profitloss', title: 'Profit and loss', desc: 'Income against expenses for a period.' },
+        { type: 'balancesheet', title: 'Balance sheet', desc: 'Assets and liabilities up to a date.' } ] }
+    ];
+
+    function renderReportsHub() {
+      const q = ((document.getElementById('reportsHubSearch') || {}).value || '').trim().toLowerCase();
+      const chev = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+      let html = '';
+      REPORT_HUB.forEach(g => {
+        const items = g.items.filter(it => !q || (it.title + ' ' + it.desc + ' ' + g.group).toLowerCase().includes(q));
+        if (!items.length) return;
+        html += `<div class="rh-gl">${g.group}</div><div class="rh-card">` + items.map(it =>
+          `<div class="rh-item" onclick="openReport('${it.type}')"><div><div class="rh-it">${it.title}</div><div class="rh-id">${it.desc}</div></div>${chev}</div>`
+        ).join('') + '</div>';
+      });
+      document.getElementById('reportsHubList').innerHTML = html || '<div class="rh-card"><div class="rh-empty">No reports found.</div></div>';
+    }
+
+    function showReportsHub() {
+      document.getElementById('ledger-section').classList.add('hub-mode');
+      document.getElementById('reportDetail').style.display = 'none';
+      document.getElementById('reportsHub').style.display = 'block';
+      renderReportsHub();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function openReport(type) {
+      const sel = document.getElementById('reportTypeSelect');
+      sel.value = type;
+      const hit = REPORT_HUB.flatMap(g => g.items).find(it => it.type === type);
+      document.getElementById('reportDetailTitle').innerText = hit ? hit.title : 'Report';
+      document.getElementById('ledger-section').classList.remove('hub-mode');
+      document.getElementById('reportsHub').style.display = 'none';
+      document.getElementById('reportDetail').style.display = 'block';
+      handleReportTypeChange();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function populateReportGroups() {
+      const sel = document.getElementById('reportGroupSelect');
+      const prev = sel.value;
+      sel.innerHTML = '';
+      accountGroups.forEach(g => {
+        const o = document.createElement('option');
+        o.value = g.name; o.innerText = g.name;
+        sel.appendChild(o);
+      });
+      const hasAcc = g => accountMaster.some(a => groupKey(a.group) === groupKey(g.name));
+      const pick = accountGroups.find(g => g.name === prev) || accountGroups.find(hasAcc) || accountGroups[0];
+      if (pick) sel.value = pick.name;
+    }
+
+    /* Group Summary / Group Balances as on a date */
+    function renderGroupReport(type) {
+      const fmt = n => (Math.round(Math.abs(n) * 100) / 100).toLocaleString('en-IN') + (n < 0 ? ' Cr' : n > 0 ? ' Dr' : '');
+      const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      const box = document.getElementById('finalReportBox');
+      const gname = document.getElementById('reportGroupSelect').value;
+      if (!gname) { box.innerHTML = '<div class="rh-empty">No account groups yet.</div>'; return; }
+      const keys = groupDescendants(gname); keys.add(groupKey(gname));
+      const accs = accountMaster.filter(a => keys.has(groupKey(a.group)));
+      if (!accs.length) { box.innerHTML = `<div class="rh-empty">No accounts in group "${esc(gname)}". Add accounts in Account Master.</div>`; return; }
+      const asOn = type === 'groupbalance';
+      const { from, to } = getReportRange();
+      const mv = {};
+      // debit = expense / payable / money into a bank; credit = income / receivable / money out of a bank
+      const add = (name, d, dr, cr) => {
+        const k = groupKey(name); if (!k || (!dr && !cr)) return;
+        const m = mv[k] || (mv[k] = { pre: 0, dr: 0, cr: 0 });
+        if (!asOn && from && d && d < from) { m.pre += dr - cr; return; }
+        if ((from || to) && !d) return;
+        if (to && d > to) return;
+        if (asOn ? false : (from && d < from)) return;
+        m.dr += dr; m.cr += cr;
+      };
+      sheets.forEach(sh => (sh.rows || []).forEach(r => {
+        const i = parseFloat(r.income) || 0, e = parseFloat(r.exp) || 0;
+        add(r.particular, r.date, e, i);
+        if (r.bankAccount) add(r.bankAccount, r.date, i, e);
+      }));
+      receivables.forEach(r => add(r.name, r.date, 0, parseFloat(r.amount) || 0));
+      payables.forEach(p => add(p.name, p.date, parseFloat(p.amount) || 0, 0));
+      const rowsData = accs.map(a => {
+        const m = mv[groupKey(a.name)] || { pre: 0, dr: 0, cr: 0 };
+        const op = (parseFloat(a.opening) || 0) * (a.drcr === 'Cr' ? -1 : 1) + m.pre;
+        return { name: a.name, op, dr: m.dr, cr: m.cr, cl: op + m.dr - m.cr };
+      }).sort((a, b) => a.name.localeCompare(b.name));
+      const tot = rowsData.reduce((t, r) => ({ op: t.op + r.op, dr: t.dr + r.dr, cr: t.cr + r.cr, cl: t.cl + r.cl }), { op: 0, dr: 0, cr: 0, cl: 0 });
+      let html;
+      if (asOn) {
+        html = `<h4 style="margin:6px 0; font-size:13px;">${esc(gname)} &ndash; balances</h4><div class="table-scroll"><table><thead><tr><th style="width:60%;">Account</th><th class="num" style="width:40%;">Closing balance ₹</th></tr></thead><tbody>` +
+          rowsData.map(r => `<tr><td>${esc(r.name)}</td><td class="num">${fmt(r.cl)}</td></tr>`).join('') +
+          `</tbody><tfoot><tr class="total-row"><td>Total</td><td class="num">${fmt(tot.cl)}</td></tr></tfoot></table></div>`;
+      } else {
+        html = `<h4 style="margin:6px 0; font-size:13px;">${esc(gname)} &ndash; summary</h4><div class="table-scroll"><table><thead><tr><th style="width:28%;">Account</th><th class="num" style="width:18%;">Opening ₹</th><th class="num" style="width:18%;">Debit ₹</th><th class="num" style="width:18%;">Credit ₹</th><th class="num" style="width:18%;">Closing ₹</th></tr></thead><tbody>` +
+          rowsData.map(r => `<tr><td>${esc(r.name)}</td><td class="num">${fmt(r.op)}</td><td class="num">${r.dr ? r.dr.toLocaleString('en-IN') : '-'}</td><td class="num">${r.cr ? r.cr.toLocaleString('en-IN') : '-'}</td><td class="num">${fmt(r.cl)}</td></tr>`).join('') +
+          `</tbody><tfoot><tr class="total-row"><td>Total</td><td class="num">${fmt(tot.op)}</td><td class="num">${tot.dr.toLocaleString('en-IN')}</td><td class="num">${tot.cr.toLocaleString('en-IN')}</td><td class="num">${fmt(tot.cl)}</td></tr></tfoot></table></div>`;
+      }
+      box.innerHTML = html;
     }
 
     /* Final Accounts: Receipt & Payment, Trial Balance, P&L, Balance Sheet */
