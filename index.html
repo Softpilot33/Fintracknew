@@ -827,7 +827,13 @@
     .more-panel .more-head:first-of-type { margin-top: 4px; }
     .more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .more-tile { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; cursor: pointer; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
-    body.role-staff .owner-only { display: none !important; }
+    body:not(.role-administrator) .owner-only { display: none !important; }
+    body.role-data_entry .no-del, body.role-view_only .no-del { display: none !important; }
+    body.role-view_only .no-write { display: none !important; }
+    body.role-data_entry .no-master,
+    body.role-data_entry #botNav-reports, body.role-data_entry #botNav-customers,
+    body.role-data_entry #deskNav-reports, body.role-data_entry #deskNav-customers,
+    body.role-data_entry #deskNav-acgroups, body.role-data_entry #deskNav-accounts { display: none !important; }
     .more-tile:active { background: #f6f8f7; }
     .more-tile span { font-size: 14px; font-weight: 600; color: #1f2937; line-height: 1.25; }
     .more-ic { width: 22px; height: 22px; color: #1f5f4a; }
@@ -1182,7 +1188,8 @@
         </div>
         <div class="adm-fhint">Used to log in</div>
         <label class="adm-flabel">Role</label>
-        <select class="adm-input adm-big" id="alRole"><option value="administrator">Administrator</option><option value="staff">Staff (no backup / restore / header title)</option></select>
+        <select class="adm-input adm-big" id="alRole" onchange="admRoleHint()"><option value="administrator">Administrator</option><option value="manager">Manager</option><option value="data_entry">Data Entry</option><option value="view_only">View Only</option></select>
+        <div class="adm-fhint" id="alRoleHint" style="margin-bottom:0;"></div>
         <label class="adm-flabel">Password</label>
         <input type="password" class="adm-input adm-big" id="alPass" autocomplete="new-password" style="margin-bottom:4px;">
         <div class="adm-fhint">At least 6 characters. Tell the user to change it.</div>
@@ -1430,8 +1437,8 @@
               <button id="prevSheetBtn" onclick="goSheet(-1)" style="font-size:10.5px; font-weight:700; color:#2563eb; background:#eff6ff; padding:5px 10px; border-radius:6px; border:1px solid #bfdbfe; cursor:pointer;">‹ Previous</button>
               <button id="nextSheetBtn" onclick="goSheet(1)" style="font-size:10.5px; font-weight:700; color:#2563eb; background:#eff6ff; padding:5px 10px; border-radius:6px; border:1px solid #bfdbfe; cursor:pointer;">Next ›</button>
             </div>
-            <button onclick="copyAndAddNewSheet()" style="font-size:10.5px; font-weight:700; color:#2563eb; background:#eff6ff; padding:5px 10px; border-radius:6px; border:1px solid #bfdbfe; cursor:pointer;">New Sheet</button>
-            <button class="plus-btn" title="Add entry" onclick="openAddForActiveTab()" style="background:#10b981; color:#fff; border:none; padding:4px 12px; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer;">+</button>
+            <button class="no-write" onclick="copyAndAddNewSheet()" style="font-size:10.5px; font-weight:700; color:#2563eb; background:#eff6ff; padding:5px 10px; border-radius:6px; border:1px solid #bfdbfe; cursor:pointer;">New Sheet</button>
+            <button class="plus-btn no-write" title="Add entry" onclick="openAddForActiveTab()" style="background:#10b981; color:#fff; border:none; padding:4px 12px; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer;">+</button>
           </div>
         </div>
       </div>
@@ -1723,8 +1730,8 @@
 
         <div class="more-head">Master</div>
         <div class="more-grid">
-        <div class="more-tile" onclick="switchSection('acgroups')"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="7" height="5.5" rx="1.2"/><rect x="14" y="10" width="7" height="5" rx="1.2"/><rect x="14" y="17" width="7" height="4" rx="1.2"/><path d="M6.5 9v10.5H14M6.5 12.5H14"/></svg><span>Account Group</span></div>
-        <div class="more-tile" onclick="switchSection('accounts')"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 4 4.5v13c3 0 6 .5 8 2 2-1.5 5-2 8-2v-13c-3 0-6 .5-8 2z"/><path d="M12 6.5v13"/></svg><span>Account Master</span></div>
+        <div class="more-tile no-master" onclick="switchSection('acgroups')"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="7" height="5.5" rx="1.2"/><rect x="14" y="10" width="7" height="5" rx="1.2"/><rect x="14" y="17" width="7" height="4" rx="1.2"/><path d="M6.5 9v10.5H14M6.5 12.5H14"/></svg><span>Account Group</span></div>
+        <div class="more-tile no-master" onclick="switchSection('accounts')"><svg class="more-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 4 4.5v13c3 0 6 .5 8 2 2-1.5 5-2 8-2v-13c-3 0-6 .5-8 2z"/><path d="M12 6.5v13"/></svg><span>Account Master</span></div>
         </div>
 
         <div class="more-head">My Profile</div>
@@ -2210,6 +2217,7 @@
     };
     async function saveToSupabase(showNotify = true) {
       if (!fintrackAuthUser) return false;
+      if (loginRole() === 'view_only') return true;
       const row = {
         user_id: dataOwnerId(),
         sheets: Array.isArray(sheets) ? sheets : [],
@@ -2320,7 +2328,7 @@
           return;
         }
         document.getElementById('tenantLockScreen').style.display = 'none';
-        document.body.classList.toggle('role-staff', isStaffLogin());
+        setRoleClasses(true);
         renderTrialBanner();
         startTenantWatch();
         document.getElementById('auth-screen-container').style.display = 'none';
@@ -2332,7 +2340,8 @@
         initUserData();
         await loadFromSupabase();
       } else {
-        document.body.classList.remove('app-locked', 'role-staff');
+        document.body.classList.remove('app-locked');
+        setRoleClasses(false);
         tenantInfo = null;
         document.getElementById('admin-app').style.display = 'none';
         document.getElementById('tenantLockScreen').style.display = 'none';
@@ -2363,7 +2372,21 @@
       renderDueTables();
     }
 
+    async function revertViewOnly() {
+      initUserData();
+      await loadFromSupabase();
+      renderSheet(); renderDueTables(); renderDashboard();
+    }
+
     function saveAllData() {
+      if (loginRole() === 'view_only') {
+        if (!window._voBusy) {
+          window._voBusy = true;
+          showToast('View Only login: changes are not allowed', 'error');
+          revertViewOnly().finally(() => { window._voBusy = false; });
+        }
+        return;
+      }
       try {
         localStorage.setItem(getUserStorageKey('sheets'), JSON.stringify(sheets));
         localStorage.setItem(getUserStorageKey('receivables'), JSON.stringify(receivables));
@@ -2799,14 +2822,14 @@
           const tr = document.createElement('tr');
           tr.innerHTML = `${dateTd}${partTd}
             <td><input type="number" inputmode="numeric" class="num" value="${inc}" placeholder="0" oninput="sheets[currentSheetIndex].rows[${i}].income=parseFloat(this.value)||0;saveAllData();calculateCashTotals();"></td>
-            <td style="white-space:nowrap;"><button class="action-btn" title="Edit" onclick="openEditCashRow(${i}, 'income')">✎</button> <button class="action-btn" onclick="deleteCashEntry(${i}, 'income')">✕</button></td>`;
+            <td style="white-space:nowrap;"><button class="action-btn no-write" title="Edit" onclick="openEditCashRow(${i}, 'income')">✎</button> <button class="action-btn no-del" onclick="deleteCashEntry(${i}, 'income')">✕</button></td>`;
           incBody.appendChild(tr);
         }
         if (exp !== 0) {
           const tr = document.createElement('tr');
           tr.innerHTML = `${dateTd}${partTd}
             <td><input type="number" inputmode="numeric" class="num exp-num" value="${exp}" placeholder="0" oninput="sheets[currentSheetIndex].rows[${i}].exp=parseFloat(this.value)||0;saveAllData();calculateCashTotals();"></td>
-            <td style="white-space:nowrap;"><button class="action-btn" title="Edit" onclick="openEditCashRow(${i}, 'expense')">✎</button> <button class="action-btn" onclick="deleteCashEntry(${i}, 'expense')">✕</button></td>`;
+            <td style="white-space:nowrap;"><button class="action-btn no-write" title="Edit" onclick="openEditCashRow(${i}, 'expense')">✎</button> <button class="action-btn no-del" onclick="deleteCashEntry(${i}, 'expense')">✕</button></td>`;
           expBody.appendChild(tr);
         }
       });
@@ -2860,7 +2883,7 @@
           <td><input type="text" value="${r.name}" placeholder="Party Name" oninput="handleLiveSuggestions(this)" onblur="setTimeout(hideAutocompleteMenu, 200)" onchange="receivables[${i}].name=this.value;saveAllData();"></td>
           <td><input type="text" value="${r.desc}" placeholder="Desc" onchange="receivables[${i}].desc=this.value;saveAllData();"></td>
           <td><input type="number" inputmode="numeric" class="num" value="${r.amount === 0 ? '' : r.amount}" placeholder="0" oninput="receivables[${i}].amount=parseFloat(this.value)||0;saveAllData();"></td>
-          <td><button class="action-btn" onclick="receivables.splice(${i},1);saveAllData();renderDueTables();">✕</button></td>
+          <td><button class="action-btn no-del" onclick="receivables.splice(${i},1);saveAllData();renderDueTables();">✕</button></td>
         `;
         rBody.appendChild(tr);
       });
@@ -2874,7 +2897,7 @@
           <td><input type="text" value="${p.name}" placeholder="Party Name" oninput="handleLiveSuggestions(this)" onblur="setTimeout(hideAutocompleteMenu, 200)" onchange="payables[${i}].name=this.value;saveAllData();"></td>
           <td><input type="text" value="${p.desc}" placeholder="Desc" onchange="payables[${i}].desc=this.value;saveAllData();"></td>
           <td><input type="number" inputmode="numeric" class="num exp-num" value="${p.amount === 0 ? '' : p.amount}" placeholder="0" oninput="payables[${i}].amount=parseFloat(this.value)||0;saveAllData();"></td>
-          <td><button class="action-btn" onclick="payables.splice(${i},1);saveAllData();renderDueTables();">✕</button></td>
+          <td><button class="action-btn no-del" onclick="payables.splice(${i},1);saveAllData();renderDueTables();">✕</button></td>
         `;
         pBody.appendChild(tr);
       });
@@ -2919,7 +2942,7 @@
           <td class="num">${fmtINR(t.received)}</td>
           <td style="white-space:nowrap;">
             <button class="action-btn" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;" onclick="openCustomerModal(${i})">✎</button>
-            <button class="action-btn" onclick="deleteCustomer(${i})">✕</button>
+            <button class="action-btn no-del" onclick="deleteCustomer(${i})">✕</button>
           </td>`;
         body.appendChild(tr);
       });
@@ -3075,7 +3098,7 @@
           <td>${g.system ? '<span style="font-size:10px; font-weight:800; color:#64748b; background:#f1f5f9; border-radius:6px; padding:2px 6px;">Built-in</span>' : '<span style="font-size:10px; font-weight:800; color:#059669; background:#ecfdf5; border-radius:6px; padding:2px 6px;">Custom</span>'}</td>
           <td class="num">${(() => { const n = countAccountsInGroup(g.name); return n ? `<a style="color:#2563eb; font-weight:800; cursor:pointer;" onclick="viewGroupAccounts(${idx})">${n}</a>` : '<span style="color:#94a3b8;">0</span>'; })()}</td>
           <td style="white-space:nowrap;">${g.system ? '' : `<button class="action-btn" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;" onclick="openGroupModal(${idx})">✎</button>
-               <button class="action-btn" onclick="deleteAccountGroup(${idx})">✕</button>`}</td>`;
+               <button class="action-btn no-del" onclick="deleteAccountGroup(${idx})">✕</button>`}</td>`;
         body.appendChild(tr);
       });
       if (!shown) {
@@ -3201,7 +3224,7 @@
           <td class="num">${op ? fmtINR(op) + ' ' + escHtml(a.drcr || 'Dr') : '-'}</td>
           <td style="white-space:nowrap;">
             <button class="action-btn" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;" onclick="openAccountModal(${i})">✎</button>
-            <button class="action-btn" onclick="deleteAccount(${i})">✕</button>
+            <button class="action-btn no-del" onclick="deleteAccount(${i})">✕</button>
           </td>`;
         body.appendChild(tr);
       });
@@ -3726,9 +3749,17 @@
       const am = (fintrackAuthUser && fintrackAuthUser.app_metadata) || {};
       return am.firm_id || (fintrackAuthUser && fintrackAuthUser.id);
     }
-    function isStaffLogin() {
+    const ROLE_LABELS = { administrator: 'Administrator', manager: 'Manager', data_entry: 'Data Entry', view_only: 'View Only' };
+    // Role of the logged-in person inside a firm (the firm owner is an Administrator)
+    function loginRole() {
       const am = (fintrackAuthUser && fintrackAuthUser.app_metadata) || {};
-      return !!am.firm_id && am.firm_role === 'staff';
+      if (!am.firm_id) return 'administrator';
+      const r = am.firm_role || 'administrator';
+      return r === 'staff' ? 'manager' : (ROLE_LABELS[r] ? r : 'administrator');
+    }
+    function setRoleClasses(on = true) {
+      const r = loginRole();
+      Object.keys(ROLE_LABELS).forEach(k => document.body.classList.toggle('role-' + k, on && k === r));
     }
 
     function isSuperAdmin() {
@@ -3748,7 +3779,8 @@
       const name = displayName();
       document.getElementById('moreName').innerText = name;
       document.getElementById('moreAvatar').innerText = (String(name).trim()[0] || 'U').toUpperCase();
-      document.getElementById('moreRole').innerText = isSuperAdmin() ? 'Admin' : (isStaffLogin() ? 'Staff' : 'Owner');
+      const am = (fintrackAuthUser && fintrackAuthUser.app_metadata) || {};
+      document.getElementById('moreRole').innerText = isSuperAdmin() ? 'Admin' : (am.firm_id ? ROLE_LABELS[loginRole()] : 'Owner');
     }
 
     function openProfileModal() {
@@ -4108,7 +4140,7 @@
       box.innerHTML = admFirmLogins.map((u, i) =>
         `<div class="adm-row" style="align-items:flex-start;">
           <div style="min-width:0;">${escHtml(u.name || '-')}<small style="word-break:break-all;">${escHtml(u.email)}${u.mobile ? ' · ' + escHtml(u.mobile) : ''}</small></div>
-          <div style="text-align:right; white-space:nowrap;"><div style="font-size:12.5px; color:#334155;">${u.role === 'staff' ? 'Staff' : 'Administrator'}</div>
+          <div style="text-align:right; white-space:nowrap;"><div style="font-size:12.5px; color:#334155;">${ROLE_LABELS[u.role === 'staff' ? 'manager' : u.role] || 'Administrator'}</div>
             <a style="font-size:12px; color:#1e3a5f; text-decoration:underline; cursor:pointer;" onclick="admResetLoginPassword(${i})">Reset password</a>${u.is_owner ? '' : ` · <a style="font-size:12px; color:#9f1d1d; text-decoration:underline; cursor:pointer;" onclick="admRemoveLogin(${i})">Remove</a>`}</div>
         </div>`).join('') || '<div class="fd-b" style="color:#64748b;">No logins</div>';
     }
@@ -4140,7 +4172,17 @@
       document.getElementById('admLoginTitle').innerText = 'New login for ' + String(admName(admCurrentFirm)).toUpperCase();
       ['alName', 'alEmail', 'alMobile', 'alPass'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('alRole').value = 'administrator';
+      admRoleHint();
       document.getElementById('admLoginDlg').style.display = 'flex';
+    }
+    function admRoleHint() {
+      const h = {
+        administrator: 'Everything, including Backup, Restore and Edit header title.',
+        manager: 'Everything except Backup, Restore and Edit header title.',
+        data_entry: 'Add and edit entries only. No delete, Reports, Customers or Master.',
+        view_only: 'Can only view. Cannot add, edit or delete.'
+      };
+      document.getElementById('alRoleHint').innerText = h[document.getElementById('alRole').value] || '';
     }
     function admCloseLoginDialog() { document.getElementById('admLoginDlg').style.display = 'none'; }
 
